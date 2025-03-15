@@ -19,7 +19,7 @@
     "pixi-spine": "4.0.4",
     "prettier": "2.1.2",
     "recursive-readdir": "^2.2.2",
-    "shelljs": "^0.8.4",
+    "shelljs": "^0.9.0",
     "typedoc": "^0.22.11",
     "typedoc-plugin-reference-excluder": "^1.0.0",
     "typescript": "4.3.2"
