@@ -11,7 +11,7 @@
 #include "GDCore/Extensions/Metadata/MetadataProvider.h"
 #include "GDCore/Extensions/PlatformExtension.h"
 #include "GDCore/IDE/DependenciesAnalyzer.h"
-#include "GDCore/IDE/GroupVariableHelper.h"
+#include "GDCore/IDE/ObjectVariableHelper.h"
 #include "GDCore/IDE/EventBasedBehaviorBrowser.h"
 #include "GDCore/IDE/EventBasedObjectBrowser.h"
 #include "GDCore/IDE/Events/ArbitraryEventsWorker.h"
@@ -314,9 +314,16 @@ void WholeProjectRefactorer::ApplyRefactoringForVariablesContainer(
   variablesContainer.SerializeTo(editedSerializedVariables);
   variablesContainer.UnserializeFrom(originalSerializedVariables);
 
-  // Rename and remove variables
+  // Rename variables
+  // Pass an empty set to avoid deletion of actions/conditions or events using
+  // them.
+  // While we support refactoring that would remove all references (actions,
+  // conditions...) it's both a bit dangerous for the user and we would need to
+  // show the user what will be removed before doing so. For now, just clear the
+  // removed variables so they don't trigger any refactoring.
+  std::unordered_set<gd::String> removedVariableNames;
   gd::EventsVariableReplacer eventsVariableReplacer(
-      project.GetCurrentPlatform(), changeset, changeset.removedVariableNames,
+      project.GetCurrentPlatform(), changeset, removedVariableNames,
       variablesContainer);
   gd::ProjectBrowserHelper::ExposeProjectEvents(project,
                                                 eventsVariableReplacer);
@@ -333,9 +340,25 @@ void WholeProjectRefactorer::ApplyRefactoringForVariablesContainer(
       project, eventsVariableInstructionTypeSwitcher);
 }
 
+// TODO Apply the refactor to external layouts.
+void WholeProjectRefactorer::ApplyRefactoringForObjectVariablesContainer(
+    gd::Project &project, gd::VariablesContainer &objectVariablesContainer,
+    gd::InitialInstancesContainer &initialInstancesContainer,
+    const gd::String &objectName, const gd::VariablesChangeset &changeset,
+    const gd::SerializerElement &originalSerializedVariables) {
+  gd::WholeProjectRefactorer::ApplyRefactoringForVariablesContainer(
+      project, objectVariablesContainer, changeset,
+      originalSerializedVariables);
+
+  gd::ObjectVariableHelper::ApplyChangesToObjectInstances(
+      objectVariablesContainer, initialInstancesContainer, objectName,
+      changeset);
+}
+
 void WholeProjectRefactorer::ApplyRefactoringForGroupVariablesContainer(
     gd::Project &project, gd::ObjectsContainer &globalObjectsContainer,
     gd::ObjectsContainer &objectsContainer,
+    gd::InitialInstancesContainer &initialInstancesContainer,
     const gd::VariablesContainer &groupVariablesContainer,
     const gd::ObjectGroup &objectGroup,
     const gd::VariablesChangeset &changeset,
@@ -355,11 +378,15 @@ void WholeProjectRefactorer::ApplyRefactoringForGroupVariablesContainer(
     }
     auto &object = hasObject ? objectsContainer.GetObject(objectName)
                              : globalObjectsContainer.GetObject(objectName);
-    auto &variablesContainer = object.GetVariables();
+    auto &objectVariablesContainer = object.GetVariables();
+
+    gd::ObjectVariableHelper::ApplyChangesToObjectInstances(
+      objectVariablesContainer, initialInstancesContainer, objectName,
+      changeset);
 
     gd::EventsVariableReplacer eventsVariableReplacer(
         project.GetCurrentPlatform(), changeset,
-        removedVariableNames, variablesContainer);
+        removedVariableNames, objectVariablesContainer);
     gd::ProjectBrowserHelper::ExposeProjectEvents(project,
                                                   eventsVariableReplacer);
   }
@@ -372,12 +399,12 @@ void WholeProjectRefactorer::ApplyRefactoringForGroupVariablesContainer(
                                                 eventsVariableReplacer);
 
   // Apply changes to objects.
-  gd::GroupVariableHelper::FillMissingGroupVariablesToObjects(
+  gd::ObjectVariableHelper::FillMissingGroupVariablesToObjects(
       globalObjectsContainer,
       objectsContainer,
       objectGroup,
       originalSerializedVariables);
-  gd::GroupVariableHelper::ApplyChangesToObjects(
+  gd::ObjectVariableHelper::ApplyChangesToObjects(
       globalObjectsContainer, objectsContainer, groupVariablesContainer,
       objectGroup, changeset);
 
@@ -600,7 +627,8 @@ void WholeProjectRefactorer::RenameEventsFunctionsExtension(
   // instructions after they are renamed.
 
   // Free expressions
-  for (auto &&eventsFunction : eventsFunctionsExtension.GetInternalVector()) {
+  for (auto &&eventsFunction :
+       eventsFunctionsExtension.GetEventsFunctions().GetInternalVector()) {
     if (eventsFunction->IsExpression()) {
       renameEventsFunction(*eventsFunction);
     }
@@ -617,7 +645,8 @@ void WholeProjectRefactorer::RenameEventsFunctionsExtension(
   }
 
   // Free instructions
-  for (auto &&eventsFunction : eventsFunctionsExtension.GetInternalVector()) {
+  for (auto &&eventsFunction :
+       eventsFunctionsExtension.GetEventsFunctions().GetInternalVector()) {
     if (eventsFunction->IsAction() || eventsFunction->IsCondition()) {
       renameEventsFunction(*eventsFunction);
     }
@@ -697,11 +726,12 @@ void WholeProjectRefactorer::RenameEventsFunction(
     gd::Project &project,
     const gd::EventsFunctionsExtension &eventsFunctionsExtension,
     const gd::String &oldFunctionName, const gd::String &newFunctionName) {
-  if (!eventsFunctionsExtension.HasEventsFunctionNamed(oldFunctionName))
+  const auto &eventsFunctions = eventsFunctionsExtension.GetEventsFunctions();
+  if (!eventsFunctions.HasEventsFunctionNamed(oldFunctionName))
     return;
 
   const gd::EventsFunction &eventsFunction =
-      eventsFunctionsExtension.GetEventsFunction(oldFunctionName);
+      eventsFunctions.GetEventsFunction(oldFunctionName);
 
   const WholeProjectBrowser wholeProjectExposer;
   DoRenameEventsFunction(
@@ -714,7 +744,7 @@ void WholeProjectRefactorer::RenameEventsFunction(
 
   if (eventsFunction.GetFunctionType() ==
       gd::EventsFunction::ExpressionAndCondition) {
-    for (auto &&otherFunction : eventsFunctionsExtension.GetInternalVector()) {
+    for (auto &&otherFunction : eventsFunctions.GetInternalVector()) {
       if (otherFunction->GetFunctionType() ==
               gd::EventsFunction::ActionWithOperator &&
           otherFunction->GetGetterName() == oldFunctionName) {
@@ -862,16 +892,34 @@ void WholeProjectRefactorer::RenameParameter(
   }
 }
 
+void WholeProjectRefactorer::ChangeParameterType(
+    gd::Project &project, gd::ProjectScopedContainers &projectScopedContainers,
+    gd::EventsFunction &eventsFunction,
+    const gd::ObjectsContainer &parameterObjectsContainer,
+    const gd::String &parameterName) {
+  std::unordered_set<gd::String> typeChangedPropertyNames;
+  typeChangedPropertyNames.insert(parameterName);
+  gd::VariablesContainer propertyVariablesContainer(
+      gd::VariablesContainer::SourceType::Properties);
+  gd::EventsVariableInstructionTypeSwitcher
+      eventsVariableInstructionTypeSwitcher(project.GetCurrentPlatform(),
+                                            typeChangedPropertyNames,
+                                            propertyVariablesContainer);
+  eventsVariableInstructionTypeSwitcher.Launch(eventsFunction.GetEvents(),
+                                               projectScopedContainers);
+}
+
 void WholeProjectRefactorer::MoveEventsFunctionParameter(
     gd::Project &project,
     const gd::EventsFunctionsExtension &eventsFunctionsExtension,
     const gd::String &functionName, std::size_t oldIndex,
     std::size_t newIndex) {
-  if (!eventsFunctionsExtension.HasEventsFunctionNamed(functionName))
+  const auto &eventsFunctions = eventsFunctionsExtension.GetEventsFunctions();
+  if (!eventsFunctions.HasEventsFunctionNamed(functionName))
     return;
 
   const gd::EventsFunction &eventsFunction =
-      eventsFunctionsExtension.GetEventsFunction(functionName);
+      eventsFunctions.GetEventsFunction(functionName);
 
   const gd::String &eventsFunctionType =
       gd::PlatformExtension::GetEventsFunctionFullType(
@@ -1173,6 +1221,42 @@ void WholeProjectRefactorer::RenameEventsBasedObjectProperty(
           eventsFunctionsExtension.GetName(), eventsBasedObject.GetName(),
           EventsBasedObject::GetPropertyConditionName(newPropertyName)));
   gd::ProjectBrowserHelper::ExposeProjectEvents(project, conditionRenamer);
+}
+
+void WholeProjectRefactorer::ChangeEventsBasedBehaviorPropertyType(
+    gd::Project &project,
+    const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+    const gd::EventsBasedBehavior &eventsBasedBehavior,
+    const gd::String &propertyName) {
+  std::unordered_set<gd::String> typeChangedPropertyNames;
+  typeChangedPropertyNames.insert(propertyName);
+  gd::VariablesContainer propertyVariablesContainer(
+      gd::VariablesContainer::SourceType::Properties);
+  gd::EventsVariableInstructionTypeSwitcher
+      eventsVariableInstructionTypeSwitcher(project.GetCurrentPlatform(),
+                                            typeChangedPropertyNames,
+                                            propertyVariablesContainer);
+  gd::ProjectBrowserHelper::ExposeEventsBasedBehaviorEvents(
+      project, eventsFunctionsExtension, eventsBasedBehavior,
+      propertyVariablesContainer, eventsVariableInstructionTypeSwitcher);
+}
+
+void WholeProjectRefactorer::ChangeEventsBasedObjectPropertyType(
+    gd::Project &project,
+    const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+    const gd::EventsBasedObject &eventsBasedObject,
+    const gd::String &propertyName) {
+  std::unordered_set<gd::String> typeChangedPropertyNames;
+  typeChangedPropertyNames.insert(propertyName);
+  gd::VariablesContainer propertyVariablesContainer(
+      gd::VariablesContainer::SourceType::Properties);
+  gd::EventsVariableInstructionTypeSwitcher
+      eventsVariableInstructionTypeSwitcher(project.GetCurrentPlatform(),
+                                            typeChangedPropertyNames,
+                                            propertyVariablesContainer);
+  gd::ProjectBrowserHelper::ExposeEventsBasedObjectEvents(
+      project, eventsFunctionsExtension, eventsBasedObject,
+      propertyVariablesContainer, eventsVariableInstructionTypeSwitcher);
 }
 
 void WholeProjectRefactorer::AddBehaviorAndRequiredBehaviors(

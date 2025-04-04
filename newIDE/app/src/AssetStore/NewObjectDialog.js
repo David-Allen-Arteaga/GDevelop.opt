@@ -161,6 +161,16 @@ export const useInstallAsset = ({
           project,
         }
       );
+      if (
+        requiredExtensionInstallation.incompatibleWithIdeExtensionShortHeaders
+          .length > 0
+      ) {
+        showAlert({
+          title: t`Could not install the asset`,
+          message: t`Please upgrade the editor to the latest version.`,
+        });
+        return null;
+      }
       const shouldUpdateExtension =
         requiredExtensionInstallation.outOfDateExtensionShortHeaders.length >
           0 &&
@@ -302,6 +312,7 @@ function NewObjectDialog({
     project,
     objectsContainer,
     resourceManagementProps,
+    targetObjectFolderOrObjectWithContext,
   });
 
   const onInstallAsset = React.useCallback(
@@ -330,6 +341,16 @@ function NewObjectDialog({
             project,
           }
         );
+        if (
+          requiredExtensionInstallation.incompatibleWithIdeExtensionShortHeaders
+            .length > 0
+        ) {
+          showAlert({
+            title: t`Could not install the asset`,
+            message: t`Please upgrade the editor to the latest version.`,
+          });
+          return;
+        }
         const shouldUpdateExtension =
           requiredExtensionInstallation.outOfDateExtensionShortHeaders.length >
             0 &&
@@ -566,12 +587,16 @@ function NewObjectDialog({
                 assetShortHeaders={displayedAssetShortHeaders}
                 addedAssetIds={existingAssetStoreIds}
                 onClose={() => setIsAssetPackDialogInstallOpen(false)}
-                onAssetsAdded={() => {
+                onAssetsAdded={createdObjects => {
                   setIsAssetPackDialogInstallOpen(false);
+                  onObjectsAddedFromAssets(createdObjects);
                 }}
                 project={project}
                 objectsContainer={objectsContainer}
                 resourceManagementProps={resourceManagementProps}
+                targetObjectFolderOrObjectWithContext={
+                  targetObjectFolderOrObjectWithContext
+                }
               />
             )}
         </>

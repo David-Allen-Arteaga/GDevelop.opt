@@ -619,7 +619,7 @@ const EventsFunctionsList = React.forwardRef<
         const eventBasedEntity = eventsBasedBehavior || eventsBasedObject;
         const eventsFunctionsContainer = eventBasedEntity
           ? eventBasedEntity.getEventsFunctions()
-          : eventsFunctionsExtension;
+          : eventsFunctionsExtension.getEventsFunctions();
 
         // Let EventsFunctionsExtensionEditor know if the function is:
         // a free function, a behavior one or an object one.
@@ -1144,14 +1144,15 @@ const EventsFunctionsList = React.forwardRef<
                 icon: <Add />,
                 label: i18n._(t`Add a function`),
                 click: () => {
+                  const freeEventsFunctions = eventsFunctionsExtension.getEventsFunctions();
                   const index =
                     !selectedEventsBasedBehavior &&
                     !selectedEventsBasedObject &&
                     selectedEventsFunction
-                      ? eventsFunctionsExtension.getEventsFunctionPosition(
+                      ? freeEventsFunctions.getEventsFunctionPosition(
                           selectedEventsFunction
                         ) + 1
-                      : eventsFunctionsExtension.getEventsFunctionsCount();
+                      : freeEventsFunctions.getEventsFunctionsCount();
                   addNewEventsFunction({
                     itemContent: null,
                     eventsBasedBehavior: null,
@@ -1162,7 +1163,8 @@ const EventsFunctionsList = React.forwardRef<
               }
             ),
             getChildren(i18n: I18nType): ?Array<TreeViewItem> {
-              if (eventsFunctionsExtension.getEventsFunctionsCount() === 0) {
+              const freeEventsFunctions = eventsFunctionsExtension.getEventsFunctions();
+              if (freeEventsFunctions.getEventsFunctionsCount() === 0) {
                 return [
                   new PlaceHolderTreeViewItem(
                     extensionFunctionsEmptyPlaceholderId,
@@ -1171,16 +1173,16 @@ const EventsFunctionsList = React.forwardRef<
                 ];
               }
               const freeFunctionProps = {
-                eventsFunctionsContainer: eventsFunctionsExtension,
+                eventsFunctionsContainer: freeEventsFunctions,
                 ...eventFunctionCommonProps,
               };
               return mapFor(
                 0,
-                eventsFunctionsExtension.getEventsFunctionsCount(),
+                freeEventsFunctions.getEventsFunctionsCount(),
                 i =>
                   new LeafTreeViewItem(
                     new EventsFunctionTreeViewItemContent(
-                      eventsFunctionsExtension.getEventsFunctionAt(i),
+                      freeEventsFunctions.getEventsFunctionAt(i),
                       freeFunctionProps
                     )
                   )
@@ -1286,7 +1288,7 @@ const EventsFunctionsList = React.forwardRef<
             selectedEventsBasedBehavior || selectedEventsBasedObject;
           const eventsFunctionsContainer = eventsBasedEntity
             ? eventsBasedEntity.getEventsFunctions()
-            : eventsFunctionsExtension;
+            : eventsFunctionsExtension.getEventsFunctions();
           const eventFunctionProps = {
             eventsBasedBehavior: selectedEventsBasedBehavior,
             eventsBasedObject: selectedEventsBasedObject,

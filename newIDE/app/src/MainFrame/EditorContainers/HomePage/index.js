@@ -42,6 +42,7 @@ import useEducationForm from './UseEducationForm';
 import { type NewProjectSetup } from '../../../ProjectCreation/NewProjectSetupDialog';
 import { type ObjectWithContext } from '../../../ObjectsList/EnumerateObjects';
 import { type GamesList } from '../../../GameDashboard/UseGamesList';
+import { type GamesPlatformFrameTools } from './PlaySection/UseGamesPlatformFrame';
 import { type CourseChapter } from '../../../Utils/GDevelopServices/Asset';
 import useCourses from './UseCourses';
 
@@ -109,10 +110,14 @@ type Props = {|
   projectItemName: ?string,
   project: ?gdProject,
   setToolbar: (?React.Node) => void,
+  hideTabsTitleBarAndEditorToolbar: (hidden: boolean) => void,
   storageProviders: Array<StorageProvider>,
 
   // Games
   gamesList: GamesList,
+
+  // Games platform
+  gamesPlatformFrameTools: GamesPlatformFrameTools,
 
   // Project opening
   canOpen: boolean,
@@ -123,7 +128,7 @@ type Props = {|
   onOpenPrivateGameTemplateListingData: (
     privateGameTemplateListingData: PrivateGameTemplateListingData
   ) => void,
-  onOpenProjectManager: () => void,
+  onOpenVersionHistory: () => void,
   askToCloseProject: () => Promise<boolean>,
   closeProject: () => Promise<void>,
 
@@ -139,7 +144,8 @@ type Props = {|
   onCreateProjectFromExample: (
     exampleShortHeader: ExampleShortHeader,
     newProjectSetup: NewProjectSetup,
-    i18n: I18nType
+    i18n: I18nType,
+    isQuickCustomization?: boolean
   ) => Promise<void>,
   onOpenTemplateFromTutorial: (tutorialId: string) => Promise<void>,
   onOpenTemplateFromCourseChapter: (
@@ -177,11 +183,12 @@ export const HomePage = React.memo<Props>(
         onSelectExampleShortHeader,
         onSelectPrivateGameTemplateListingData,
         onOpenPrivateGameTemplateListingData,
-        onOpenProjectManager,
+        onOpenVersionHistory,
         onOpenLanguageDialog,
         onOpenProfile,
         onCreateProjectFromExample,
         setToolbar,
+        hideTabsTitleBarAndEditorToolbar,
         selectInAppTutorial,
         onOpenPreferences,
         onOpenAbout,
@@ -195,6 +202,7 @@ export const HomePage = React.memo<Props>(
         onOpenTemplateFromTutorial,
         onOpenTemplateFromCourseChapter,
         gamesList,
+        gamesPlatformFrameTools,
       }: Props,
       ref
     ) => {
@@ -205,6 +213,10 @@ export const HomePage = React.memo<Props>(
         onOpenLoginDialog,
         limits,
       } = authenticatedUser;
+      const {
+        startTimeoutToUnloadIframe,
+        loadIframeOrRemoveTimeout,
+      } = gamesPlatformFrameTools;
       const userSurveyStartedRef = React.useRef<boolean>(false);
       const userSurveyHiddenRef = React.useRef<boolean>(false);
       const { fetchTutorials } = React.useContext(TutorialContext);
@@ -238,7 +250,7 @@ export const HomePage = React.memo<Props>(
       const {
         selectedCourse,
         courseChapters,
-        isLoadingChapters,
+        areChaptersReady,
         onCompleteTask,
         isTaskCompleted,
         getChapterCompletion,
@@ -316,6 +328,10 @@ export const HomePage = React.memo<Props>(
             }
           } else if (requestedTab === 'learn') {
             const courseId = routeArguments['course-id'];
+            if (!areChaptersReady) {
+              // Do not process requested tab before courses are ready.
+              return;
+            }
 
             if (courseId && selectedCourse && selectedCourse.id === courseId) {
               setLearnCategory('course');
@@ -332,6 +348,7 @@ export const HomePage = React.memo<Props>(
           setInitialPackUserFriendlySlug,
           setInitialGameTemplateUserFriendlySlug,
           games,
+          areChaptersReady,
         ]
       );
 
@@ -399,7 +416,7 @@ export const HomePage = React.memo<Props>(
                 hasProject={!!project}
                 onOpenLanguageDialog={onOpenLanguageDialog}
                 onOpenProfile={onOpenProfile}
-                onOpenProjectManager={onOpenProjectManager}
+                onOpenVersionHistory={onOpenVersionHistory}
                 onSave={onSave}
                 canSave={canSave}
               />
@@ -410,7 +427,7 @@ export const HomePage = React.memo<Props>(
           setToolbar,
           onOpenLanguageDialog,
           onOpenProfile,
-          onOpenProjectManager,
+          onOpenVersionHistory,
           project,
           onSave,
           canSave,
@@ -418,11 +435,24 @@ export const HomePage = React.memo<Props>(
       );
 
       // Ensure the toolbar is up to date when the active tab changes.
-      React.useEffect(
+      // Use a layout effect to ensure titlebar/toolbar are updated at the same time
+      // as the rest of the interface (same React render).
+      React.useLayoutEffect(
         () => {
-          updateToolbar();
+          // Hide the toolbars when on mobile in the "play" tab.
+          if (activeTab === 'play' && isMobile) {
+            hideTabsTitleBarAndEditorToolbar(true);
+          } else {
+            hideTabsTitleBarAndEditorToolbar(false);
+            updateToolbar();
+          }
+
+          // Ensure we show it again when the tab changes.
+          return () => {
+            hideTabsTitleBarAndEditorToolbar(false);
+          };
         },
-        [updateToolbar]
+        [updateToolbar, activeTab, hideTabsTitleBarAndEditorToolbar, isMobile]
       );
 
       const forceUpdateEditor = React.useCallback(() => {
@@ -468,6 +498,35 @@ export const HomePage = React.memo<Props>(
         },
         // Reset flag that prevents multiple send of the same event on user change.
         [authenticated]
+      );
+
+      // As the homepage is never unmounted, we need to ensure the games platform
+      // iframe is unloaded & loaded from here,
+      // allowing to handle when the user navigates to another tab.
+      React.useEffect(
+        () => {
+          if (!isActive) {
+            // This happens when the user navigates to another tab. (ex: Scene or Events)
+            startTimeoutToUnloadIframe();
+            return;
+          }
+
+          if (activeTab === 'play') {
+            // This happens when the user navigates to the "Play" tab,
+            // - From another Home Tab.
+            // - From another tab (ex: Scene or Events).
+            loadIframeOrRemoveTimeout();
+          } else {
+            // This happens when the user navigates to another Home Tab.
+            startTimeoutToUnloadIframe();
+          }
+        },
+        [
+          isActive,
+          startTimeoutToUnloadIframe,
+          loadIframeOrRemoveTimeout,
+          activeTab,
+        ]
       );
 
       return (
@@ -531,7 +590,6 @@ export const HomePage = React.memo<Props>(
                       onSelectCategory={setLearnCategory}
                       course={selectedCourse}
                       courseChapters={courseChapters}
-                      isLoadingChapters={isLoadingChapters}
                       onCompleteCourseTask={onCompleteTask}
                       isCourseTaskCompleted={isTaskCompleted}
                       getCourseChapterCompletion={getChapterCompletion}
@@ -541,7 +599,11 @@ export const HomePage = React.memo<Props>(
                       }
                     />
                   )}
-                  {activeTab === 'play' && <PlaySection />}
+                  {activeTab === 'play' && (
+                    <PlaySection
+                      gamesPlatformFrameTools={gamesPlatformFrameTools}
+                    />
+                  )}
                   {activeTab === 'shop' && (
                     <StoreSection
                       project={project}
@@ -604,6 +666,7 @@ export const renderHomePageContainer = (
     isActive={props.isActive}
     projectItemName={props.projectItemName}
     setToolbar={props.setToolbar}
+    hideTabsTitleBarAndEditorToolbar={props.hideTabsTitleBarAndEditorToolbar}
     canOpen={props.canOpen}
     onChooseProject={props.onChooseProject}
     onOpenRecentFile={props.onOpenRecentFile}
@@ -615,7 +678,7 @@ export const renderHomePageContainer = (
       props.onOpenPrivateGameTemplateListingData
     }
     onOpenNewProjectSetupDialog={props.onOpenNewProjectSetupDialog}
-    onOpenProjectManager={props.onOpenProjectManager}
+    onOpenVersionHistory={props.onOpenVersionHistory}
     onOpenTemplateFromTutorial={props.onOpenTemplateFromTutorial}
     onOpenTemplateFromCourseChapter={props.onOpenTemplateFromCourseChapter}
     onOpenLanguageDialog={props.onOpenLanguageDialog}
@@ -633,5 +696,6 @@ export const renderHomePageContainer = (
     canSave={props.canSave}
     resourceManagementProps={props.resourceManagementProps}
     gamesList={props.gamesList}
+    gamesPlatformFrameTools={props.gamesPlatformFrameTools}
   />
 );

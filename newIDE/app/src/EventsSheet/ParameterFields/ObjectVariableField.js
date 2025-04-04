@@ -16,7 +16,6 @@ import {
 import { getLastObjectParameterValue } from './ParameterMetadataTools';
 import getObjectByName from '../../Utils/GetObjectByName';
 import getObjectGroupByName from '../../Utils/GetObjectGroupByName';
-import ObjectVariableIcon from '../../UI/CustomSvgIcons/ObjectVariable';
 import { enumerateVariables } from './EnumerateVariables';
 import { intersectionBy } from 'lodash';
 import EventsRootVariablesFinder from '../../Utils/EventsRootVariablesFinder';
@@ -117,7 +116,11 @@ export default React.forwardRef<ParameterFieldProps, ParameterFieldInterface>(
     const canObjectDeclareVariable =
       objectSourceType !== gd.ObjectsContainer.Function;
 
-    const { layout } = scope;
+    const { layout, eventsBasedObject } = scope;
+    const initialInstances =
+      (layout && layout.getInitialInstances()) ||
+      (eventsBasedObject && eventsBasedObject.getInitialInstances()) ||
+      null;
     const variablesContainers = React.useMemo<Array<gdVariablesContainer>>(
       () =>
         objectName && canObjectDeclareVariable
@@ -205,6 +208,7 @@ export default React.forwardRef<ParameterFieldProps, ParameterFieldInterface>(
               : undefined
           }
           onInstructionTypeChanged={onInstructionTypeChanged}
+          getVariableSourceFromIdentifier={getVariableSourceFromIdentifier}
         />
         {editorOpen &&
           project &&
@@ -214,11 +218,11 @@ export default React.forwardRef<ParameterFieldProps, ParameterFieldInterface>(
               project={project}
               projectScopedContainersAccessor={projectScopedContainersAccessor}
               objectName={objectName}
+              initialInstances={initialInstances}
               variablesContainer={variablesContainers[0]}
               open
               onCancel={() => setEditorOpen(null)}
               onApply={onVariableEditorApply}
-              preventRefactoringToDeleteInstructions
               initiallySelectedVariableName={editorOpen.variableName}
               shouldCreateInitiallySelectedVariable={editorOpen.shouldCreate}
               onComputeAllVariableNames={onComputeAllVariableNames}
@@ -233,6 +237,7 @@ export default React.forwardRef<ParameterFieldProps, ParameterFieldInterface>(
               project={project}
               projectScopedContainersAccessor={projectScopedContainersAccessor}
               globalObjectsContainer={globalObjectsContainer}
+              initialInstances={initialInstances}
               objectsContainer={objectsContainer}
               objectGroup={objectGroup}
               onCancel={() => setEditorOpen(null)}
@@ -248,6 +253,16 @@ export default React.forwardRef<ParameterFieldProps, ParameterFieldInterface>(
   }
 );
 
+const getVariableSourceFromIdentifier = (
+  identifier: string,
+  projectScopedContainers: gdProjectScopedContainers
+): VariablesContainer_SourceType => gd.VariablesContainer.Object;
+
 export const renderInlineObjectVariable = (
   props: ParameterInlineRendererProps
-) => renderVariableWithIcon(props, 'object variable', ObjectVariableIcon);
+) =>
+  renderVariableWithIcon(
+    props,
+    'object variable',
+    getVariableSourceFromIdentifier
+  );

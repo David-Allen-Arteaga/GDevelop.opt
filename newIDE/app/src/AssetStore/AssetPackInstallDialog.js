@@ -17,6 +17,7 @@ import {
   checkRequiredExtensionsUpdateForAssets,
   installRequiredExtensions,
   installPublicAsset,
+  type RequiredExtensionInstallation,
 } from './InstallAsset';
 import EventsFunctionsExtensionsContext from '../EventsFunctionsExtensionsLoader/EventsFunctionsExtensionsContext';
 import { showErrorBox } from '../UI/Messages/MessageBox';
@@ -35,6 +36,7 @@ import {
   useFetchAssets,
 } from './NewObjectDialog';
 import { type InstallAssetOutput } from './InstallAsset';
+import { type ObjectFolderOrObjectWithContext } from '../ObjectsList/EnumerateObjectFolderOrObject';
 
 // We limit the number of assets that can be installed at once to avoid
 // timeouts especially with premium packs.
@@ -45,10 +47,11 @@ type Props = {|
   assetShortHeaders: Array<AssetShortHeader>,
   addedAssetIds: Set<string>,
   onClose: () => void,
-  onAssetsAdded: () => void,
+  onAssetsAdded: (createdObjects: gdObject[]) => void,
   project: gdProject,
   objectsContainer: ?gdObjectsContainer,
   resourceManagementProps: ResourceManagementProps,
+  targetObjectFolderOrObjectWithContext?: ?ObjectFolderOrObjectWithContext,
 |};
 
 const AssetPackInstallDialog = ({
@@ -60,6 +63,7 @@ const AssetPackInstallDialog = ({
   project,
   objectsContainer,
   resourceManagementProps,
+  targetObjectFolderOrObjectWithContext,
 }: Props) => {
   const missingAssetShortHeaders = assetShortHeaders.filter(
     assetShortHeader => !addedAssetIds.has(assetShortHeader.id)
@@ -148,7 +152,7 @@ const AssetPackInstallDialog = ({
       setAreAssetsBeingInstalled(true);
       try {
         const assets = await fetchAssets(assetShortHeaders);
-        const requiredExtensionInstallation = await checkRequiredExtensionsUpdateForAssets(
+        const requiredExtensionInstallation: RequiredExtensionInstallation = await checkRequiredExtensionsUpdateForAssets(
           {
             assets,
             project,
@@ -168,20 +172,39 @@ const AssetPackInstallDialog = ({
         });
 
         // Use a pool to avoid installing an unbounded amount of assets at the same time.
-        const { errors } = await PromisePool.withConcurrency(6)
+        const { errors, results } = await PromisePool.withConcurrency(6)
           .for(assets)
           .process<InstallAssetOutput>(async asset => {
-            const installOutput = isPrivateAsset(asset)
-              ? await installPrivateAsset({
-                  asset,
-                  project,
-                  objectsContainer: targetObjectsContainer,
-                })
-              : await installPublicAsset({
-                  asset,
-                  project,
-                  objectsContainer: targetObjectsContainer,
-                });
+            const isAssetCompatibleWithIde = asset.objectAssets.every(
+              objectAsset =>
+                !objectAsset.requiredExtensions ||
+                objectAsset.requiredExtensions.every(requiredExtension =>
+                  requiredExtensionInstallation.incompatibleWithIdeExtensionShortHeaders.every(
+                    extensionShortHeader =>
+                      extensionShortHeader.name !==
+                      requiredExtension.extensionName
+                  )
+                )
+            );
+            if (!isAssetCompatibleWithIde) {
+              throw new Error(
+                'Unable to install the asset. Please upgrade the editor to the latest version.'
+              );
+            }
+
+            const doInstall = isPrivateAsset(asset)
+              ? installPrivateAsset
+              : installPublicAsset;
+            const installOutput = await doInstall({
+              asset,
+              project,
+              objectsContainer: targetObjectsContainer,
+              targetObjectFolderOrObject:
+                targetObjectFolderOrObjectWithContext &&
+                !targetObjectFolderOrObjectWithContext.global
+                  ? targetObjectFolderOrObjectWithContext.objectFolderOrObject
+                  : null,
+            });
 
             if (!installOutput) {
               throw new Error('Unable to install the asset.');
@@ -200,7 +223,10 @@ const AssetPackInstallDialog = ({
         await resourceManagementProps.onFetchNewlyAddedResources();
 
         setAreAssetsBeingInstalled(false);
-        onAssetsAdded();
+        const createdObjects = results
+          .map(result => result.createdObjects)
+          .flat();
+        onAssetsAdded(createdObjects);
       } catch (error) {
         setAreAssetsBeingInstalled(false);
         console.error('Error while installing the assets', error);
@@ -221,6 +247,7 @@ const AssetPackInstallDialog = ({
       onAssetsAdded,
       installPrivateAsset,
       targetObjectsContainer,
+      targetObjectFolderOrObjectWithContext,
     ]
   );
 

@@ -36,7 +36,7 @@ namespace gd {
  *
  * \ingroup PlatformDefinition
  */
-class GD_CORE_API EventsFunctionsExtension : public EventsFunctionsContainer {
+class GD_CORE_API EventsFunctionsExtension {
  public:
   EventsFunctionsExtension();
   EventsFunctionsExtension(const EventsFunctionsExtension&);
@@ -135,6 +135,19 @@ class GD_CORE_API EventsFunctionsExtension : public EventsFunctionsContainer {
   }
 
   /**
+   * \brief Get the GDevelop version required by this extension.
+   */
+  const gd::String& GetGDevelopVersion() const { return gdevelopVersion; };
+
+  /**
+   * \brief Set the GDevelop version required by this extension.
+   */
+  EventsFunctionsExtension& SetGDevelopVersion(const gd::String& gdevelopVersion_) {
+    gdevelopVersion = gdevelopVersion_;
+    return *this;
+  }
+
+  /**
    * \brief Return a reference to the list of the events based behaviors.
    */
   gd::SerializableWithNameList<EventsBasedBehavior>& GetEventsBasedBehaviors() {
@@ -179,6 +192,21 @@ class GD_CORE_API EventsFunctionsExtension : public EventsFunctionsContainer {
   virtual const gd::String& GetOriginName() const { return originName; }
   virtual const gd::String& GetOriginIdentifier() const {
     return originIdentifier;
+  }
+
+  /**
+   * \brief Return a reference to the functions of the events based behavior or object.
+   */
+  EventsFunctionsContainer& GetEventsFunctions() {
+    return eventsFunctionsContainer;
+  }
+
+  /**
+   * \brief Return a const reference to the functions of the events based
+   * behavior or object.
+   */
+  const EventsFunctionsContainer& GetEventsFunctions() const {
+    return eventsFunctionsContainer;
   }
 
   /** \name Dependencies
@@ -370,11 +398,13 @@ class GD_CORE_API EventsFunctionsExtension : public EventsFunctionsContainer {
   gd::String iconUrl;
   gd::String helpPath;  ///< The relative path to the help for this extension in
                         ///< the documentation (or an absolute URL).
+  gd::String gdevelopVersion;
   gd::SerializableWithNameList<EventsBasedBehavior> eventsBasedBehaviors;
   gd::SerializableWithNameList<EventsBasedObject> eventsBasedObjects;
   std::vector<gd::DependencyMetadata> dependencies;
   std::vector<gd::SourceFileMetadata> sourceFiles;
 
+  gd::EventsFunctionsContainer eventsFunctionsContainer;
   gd::VariablesContainer globalVariables;
   gd::VariablesContainer sceneVariables;
 };

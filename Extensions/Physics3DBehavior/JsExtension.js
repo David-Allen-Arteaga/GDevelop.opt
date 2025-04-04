@@ -20,8 +20,8 @@ module.exports = {
     extension
       .setExtensionInformation(
         'Physics3D',
-        _('3D Physics Engine'),
-        "The physics engine simulates realistic object physics, with gravity, forces, joints, etc. It's perfect for games that need to have realistic behaving objects and a gameplay centered around it.",
+        _('3D physics engine'),
+        "The 3D physics engine simulates realistic object physics, with gravity, forces, collisions, joints, etc. It's perfect for almost all 3D games.",
         'Florian Rival',
         'MIT'
       )
@@ -29,7 +29,7 @@ module.exports = {
       .setCategory('Movement')
       .setTags('physics, gravity, obstacle, collision');
     extension
-      .addInstructionOrExpressionGroupMetadata(_('3D Physics Engine'))
+      .addInstructionOrExpressionGroupMetadata(_('3D physics engine'))
       .setIcon('JsPlatform/Extensions/physics3d.svg');
     {
       const behavior = new gd.BehaviorJsImplementation();
@@ -481,7 +481,9 @@ module.exports = {
           'Physics3DBehavior',
           _('3D physics engine'),
           'Physics3D',
-          _('Simulate realistic object physics with gravity, forces, etc.'),
+          _(
+            'Simulate realistic 3D physics for this object including gravity, forces, collisions, etc.'
+          ),
           '',
           'JsPlatform/Extensions/physics3d.svg',
           'Physics3DBehavior',
@@ -998,8 +1000,8 @@ module.exports = {
           'number',
           'AngularVelocityX',
           _('Angular velocity X'),
-          _('the object angular velocity on X.'),
-          _('the angular velocity on X'),
+          _('the object angular velocity around X.'),
+          _('the angular velocity around X'),
           _('Velocity'),
           'JsPlatform/Extensions/physics3d.svg'
         )
@@ -1019,8 +1021,8 @@ module.exports = {
           'number',
           'AngularVelocityY',
           _('Angular velocity Y'),
-          _('the object angular velocity on Y.'),
-          _('the angular velocity on Y'),
+          _('the object angular velocity around Y.'),
+          _('the angular velocity around Y'),
           _('Velocity'),
           'JsPlatform/Extensions/physics3d.svg'
         )
@@ -1040,8 +1042,8 @@ module.exports = {
           'number',
           'AngularVelocityZ',
           _('Angular velocity Z'),
-          _('the object angular velocity on Z.'),
-          _('the angular velocity on Z'),
+          _('the object angular velocity around Z.'),
+          _('the angular velocity around Z'),
           _('Velocity'),
           'JsPlatform/Extensions/physics3d.svg'
         )
@@ -1551,6 +1553,13 @@ module.exports = {
           return true;
         }
 
+        if (propertyName === 'canBePushed') {
+          behaviorContent
+            .getChild('canBePushed')
+            .setBoolValue(newValue === '1');
+          return true;
+        }
+
         return false;
       };
       behavior.getProperties = function (behaviorContent) {
@@ -1745,6 +1754,22 @@ module.exports = {
           .setAdvanced(true)
           .setQuickCustomizationVisibility(gd.QuickCustomization.Hidden);
 
+        if (!behaviorContent.hasChild('canBePushed')) {
+          behaviorContent.addChild('canBePushed').setBoolValue(true);
+        }
+        behaviorProperties
+          .getOrCreate('canBePushed')
+          .setLabel('Can be pushed by other characters')
+          .setGroup(_('Walk'))
+          .setType('Boolean')
+          .setValue(
+            behaviorContent.getChild('canBePushed').getBoolValue()
+              ? 'true'
+              : 'false'
+          )
+          .setAdvanced(true)
+          .setQuickCustomizationVisibility(gd.QuickCustomization.Hidden);
+
         return behaviorProperties;
       };
 
@@ -1765,6 +1790,7 @@ module.exports = {
         behaviorContent
           .addChild('shouldBindObjectAndForwardAngle')
           .setBoolValue(true);
+        behaviorContent.addChild('canBePushed').setBoolValue(true);
       };
 
       const aut = extension

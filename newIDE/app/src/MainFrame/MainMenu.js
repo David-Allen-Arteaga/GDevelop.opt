@@ -45,6 +45,7 @@ export type MainMenuCallbacks = {|
   onOpenPreferences: (open?: boolean) => void,
   onOpenLanguage: (open?: boolean) => void,
   onOpenProfile: (open?: boolean) => void,
+  onOpenAskAi: (open?: boolean) => void,
   setElectronUpdateStatus: ElectronUpdateStatus => void,
 |};
 
@@ -71,6 +72,7 @@ export type MainMenuEvent =
   | 'main-menu-open-preferences'
   | 'main-menu-open-language'
   | 'main-menu-open-profile'
+  | 'main-menu-open-ask-ai'
   | 'update-status';
 
 const getMainMenuEventCallback = (
@@ -95,6 +97,7 @@ const getMainMenuEventCallback = (
     'main-menu-open-preferences': callbacks.onOpenPreferences,
     'main-menu-open-language': callbacks.onOpenLanguage,
     'main-menu-open-profile': callbacks.onOpenProfile,
+    'main-menu-open-ask-ai': callbacks.onOpenAskAi,
     'update-status': callbacks.setElectronUpdateStatus,
   };
 
@@ -183,30 +186,9 @@ export const buildMainMenuDeclarativeTemplate = ({
         ? [
             { type: 'separator' },
             {
-              label: i18n._(t`My Profile`),
-              onClickSendEvent: 'main-menu-open-profile',
-            },
-            {
               label: i18n._(t`Preferences`),
               onClickSendEvent: 'main-menu-open-preferences',
             },
-            {
-              label: i18n._(t`Language`),
-              onClickSendEvent: 'main-menu-open-language',
-            },
-            // Leaving the app can only be done on the desktop app.
-            ...(!!electron
-              ? [
-                  { type: 'separator' },
-                  {
-                    label: i18n._(t`Exit GDevelop`),
-                    accelerator: getElectronAccelerator(
-                      shortcutMap['QUIT_APP']
-                    ),
-                    onClickSendEvent: 'main-menu-close-app',
-                  },
-                ]
-              : []),
           ]
         : []),
     ],
@@ -276,6 +258,10 @@ export const buildMainMenuDeclarativeTemplate = ({
     role: 'help',
     submenu: [
       {
+        label: i18n._(t`Ask AI (GDevelop chatbot)`),
+        onClickSendEvent: 'main-menu-open-ask-ai',
+      },
+      {
         label: i18n._(t`GDevelop website`),
         onClickOpenLink: 'http://gdevelop.io',
       },
@@ -337,7 +323,7 @@ export const buildMainMenuDeclarativeTemplate = ({
       },
       { type: 'separator' },
       {
-        label: i18n._(t`Help to Translate GDevelop`),
+        label: i18n._(t`Help translate GDevelop`),
         onClickOpenLink: 'https://crowdin.com/project/gdevelop',
       },
       {
@@ -360,9 +346,9 @@ export const buildMainMenuDeclarativeTemplate = ({
   // on the web-app, because they would not work and make sense at all.
   const template: Array<MenuDeclarativeItemTemplate> = [
     fileTemplate,
-    ...(!!electron ? [editTemplate] : []),
-    viewTemplate,
-    ...(!!electron ? [windowTemplate] : []),
+    ...(!!electron && isApplicationTopLevelMenu ? [editTemplate] : []),
+    ...(!!electron && isApplicationTopLevelMenu ? [viewTemplate] : []),
+    ...(!!electron && isApplicationTopLevelMenu ? [windowTemplate] : []),
     helpTemplate,
   ];
 

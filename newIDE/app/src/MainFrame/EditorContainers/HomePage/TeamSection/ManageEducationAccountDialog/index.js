@@ -31,7 +31,7 @@ import AlertMessage from '../../../../../UI/AlertMessage';
 import Link from '../../../../../UI/Link';
 import TeamAvailableSeats from '../TeamAvailableSeats';
 import { copyTextToClipboard } from '../../../../../Utils/Clipboard';
-import ChevronArrowTop from '../../../../../UI/CustomSvgIcons/ChevronArrowTop';
+import ChevronArrowRight from '../../../../../UI/CustomSvgIcons/ChevronArrowRight';
 import ChevronArrowBottom from '../../../../../UI/CustomSvgIcons/ChevronArrowBottom';
 import Paper from '../../../../../UI/Paper';
 import Checkbox from '../../../../../UI/Checkbox';
@@ -636,6 +636,7 @@ const ManageEducationAccountDialog = ({ onClose }: Props) => {
                           openSubscriptionDialog({
                             analyticsMetadata: {
                               reason: 'Manage subscription as teacher',
+                              recommendedPlanId: 'gdevelop_education',
                             },
                             filter: 'education',
                           })
@@ -929,7 +930,7 @@ const ManageEducationAccountDialog = ({ onClose }: Props) => {
                                   setIsArchivedAccountsSectionOpen(false)
                                 }
                               >
-                                <ChevronArrowTop />
+                                <ChevronArrowBottom />
                               </IconButton>
                             ) : (
                               <IconButton
@@ -940,7 +941,7 @@ const ManageEducationAccountDialog = ({ onClose }: Props) => {
                                   setIsArchivedAccountsSectionOpen(true)
                                 }
                               >
-                                <ChevronArrowBottom />
+                                <ChevronArrowRight />
                               </IconButton>
                             )}
                             <Text size="sub-title">
