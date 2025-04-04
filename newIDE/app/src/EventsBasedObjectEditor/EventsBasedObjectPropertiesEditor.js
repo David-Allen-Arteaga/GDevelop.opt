@@ -93,6 +93,7 @@ type Props = {|
   eventsBasedObject: gdEventsBasedObject,
   onPropertiesUpdated?: () => void,
   onRenameProperty: (oldName: string, newName: string) => void,
+  onPropertyTypeChanged: (propertyName: string) => void,
   onEventsFunctionsAdded: () => void,
 |};
 
@@ -129,6 +130,7 @@ export default function EventsBasedObjectPropertiesEditor({
   eventsBasedObject,
   onPropertiesUpdated,
   onRenameProperty,
+  onPropertyTypeChanged,
   onEventsFunctionsAdded,
 }: Props) {
   const scrollView = React.useRef<?ScrollViewInterface>(null);
@@ -700,6 +702,9 @@ export default function EventsBasedObjectPropertiesEditor({
                                             );
                                           }
                                           forceUpdate();
+                                          onPropertyTypeChanged(
+                                            property.getName()
+                                          );
                                           onPropertiesUpdated &&
                                             onPropertiesUpdated();
                                         }}
@@ -728,6 +733,11 @@ export default function EventsBasedObjectPropertiesEditor({
                                         <SelectOption
                                           value="LeaderboardId"
                                           label={t`Leaderboard (text)`}
+                                        />
+                                        <SelectOption
+                                          key="property-type-text-area"
+                                          value="MultilineString"
+                                          label={t`Multiline text`}
                                         />
                                         <SelectOption
                                           key="property-type-resource"
@@ -781,7 +791,9 @@ export default function EventsBasedObjectPropertiesEditor({
                                         </SelectField>
                                       )}
                                       {(property.getType() === 'String' ||
-                                        property.getType() === 'Number') && (
+                                        property.getType() === 'Number' ||
+                                        property.getType() ===
+                                          'MultilineString') && (
                                         <SemiControlledTextField
                                           commitOnBlur
                                           floatingLabelText={
@@ -799,6 +811,10 @@ export default function EventsBasedObjectPropertiesEditor({
                                             onPropertiesUpdated &&
                                               onPropertiesUpdated();
                                           }}
+                                          multiline={
+                                            property.getType() ===
+                                            'MultilineString'
+                                          }
                                           fullWidth
                                         />
                                       )}

@@ -29,7 +29,7 @@ import GridListTile from '@material-ui/core/GridListTile';
 import ImageTileRow from '../../../../UI/ImageTileRow';
 import { formatTutorialToImageTileComponent, TUTORIAL_CATEGORY_TEXTS } from '.';
 import GuidedLessons from '../InAppTutorials/GuidedLessons';
-import ChevronArrowRight from '../../../../UI/CustomSvgIcons/ChevronArrowRight';
+import ArrowRight from '../../../../UI/CustomSvgIcons/ArrowRight';
 import Upload from '../../../../UI/CustomSvgIcons/Upload';
 import FlingGame from '../InAppTutorials/FlingGame';
 import AuthenticatedUserContext from '../../../../Profile/AuthenticatedUserContext';
@@ -129,7 +129,7 @@ export const TutorialsRow = ({
             })
           )}
         onShowAll={() => onSelectCategory(category)}
-        showAllIcon={<ChevronArrowRight fontSize="small" />}
+        showAllIcon={<ArrowRight fontSize="small" />}
         getColumnsFromWindowSize={getTutorialsColumnsFromWidth}
         getLimitFromWindowSize={getTutorialsColumnsFromWidth}
       />
@@ -144,7 +144,6 @@ type Props = {|
   selectInAppTutorial: (tutorialId: string) => void,
   course: ?Course,
   courseChapters: ?(CourseChapter[]),
-  isLoadingChapters: boolean,
   getCourseCompletion: () => CourseCompletion | null,
   getCourseChapterCompletion: (
     chapterId: string
@@ -158,7 +157,6 @@ const MainPage = ({
   selectInAppTutorial,
   course,
   courseChapters,
-  isLoadingChapters,
   getCourseCompletion,
   getCourseChapterCompletion,
 }: Props) => {

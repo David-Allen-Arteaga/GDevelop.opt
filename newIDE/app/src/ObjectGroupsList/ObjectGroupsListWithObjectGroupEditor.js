@@ -60,6 +60,7 @@ const ObjectGroupsListWithObjectGroupEditor = ({
       <ObjectGroupsList
         ref={objectGroupsListInterface}
         globalObjectGroups={globalObjectGroups}
+        projectScopedContainersAccessor={projectScopedContainersAccessor}
         objectGroups={objectGroups}
         onCreateGroup={() => setCreatingNewGroup(true)}
         onEditGroup={setEditedGroup}
@@ -83,6 +84,7 @@ const ObjectGroupsListWithObjectGroupEditor = ({
           group={editedGroup}
           globalObjectsContainer={globalObjectsContainer}
           objectsContainer={objectsContainer}
+          initialInstances={null}
           bypassedObjectGroupsContainer={objectGroups}
           onCancel={() => {
             setEditedGroup(null);

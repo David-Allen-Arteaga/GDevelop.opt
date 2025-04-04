@@ -15,14 +15,13 @@
 namespace gd {
 
 EventsFunctionsExtension::EventsFunctionsExtension() :
-    gd::EventsFunctionsContainer(
-        gd::EventsFunctionsContainer::FunctionOwner::Extension),
+      eventsFunctionsContainer(gd::EventsFunctionsContainer::FunctionOwner::Extension),
       globalVariables(gd::VariablesContainer::SourceType::ExtensionGlobal),
       sceneVariables(gd::VariablesContainer::SourceType::ExtensionScene) {}
 
 EventsFunctionsExtension::EventsFunctionsExtension(
     const EventsFunctionsExtension& other) :
-    gd::EventsFunctionsContainer(
+    eventsFunctionsContainer(
         gd::EventsFunctionsContainer::FunctionOwner::Extension) {
   Init(other);
 }
@@ -48,7 +47,8 @@ void EventsFunctionsExtension::Init(const gd::EventsFunctionsExtension& other) {
   previewIconUrl = other.previewIconUrl;
   iconUrl = other.iconUrl;
   helpPath = other.helpPath;
-  EventsFunctionsContainer::Init(other);
+  gdevelopVersion = other.gdevelopVersion;
+  eventsFunctionsContainer = other.eventsFunctionsContainer;
   eventsBasedBehaviors = other.eventsBasedBehaviors;
   eventsBasedObjects = other.eventsBasedObjects;
   globalVariables = other.GetGlobalVariables();
@@ -82,6 +82,7 @@ void EventsFunctionsExtension::SerializeTo(SerializerElement& element) const {
   element.SetAttribute("previewIconUrl", previewIconUrl);
   element.SetAttribute("iconUrl", iconUrl);
   element.SetAttribute("helpPath", helpPath);
+  element.SetAttribute("gdevelopVersion", gdevelopVersion);
   auto& dependenciesElement = element.AddChild("dependencies");
   dependenciesElement.ConsiderAsArray();
   for (auto& dependency : dependencies)
@@ -97,7 +98,8 @@ void EventsFunctionsExtension::SerializeTo(SerializerElement& element) const {
   GetGlobalVariables().SerializeTo(element.AddChild("globalVariables"));
   GetSceneVariables().SerializeTo(element.AddChild("sceneVariables"));
 
-  SerializeEventsFunctionsTo(element.AddChild("eventsFunctions"));
+  eventsFunctionsContainer.SerializeEventsFunctionsTo(
+      element.AddChild("eventsFunctions"));
   eventsBasedBehaviors.SerializeElementsTo(
       "eventsBasedBehavior", element.AddChild("eventsBasedBehaviors"));
   eventsBasedObjects.SerializeElementsTo(
@@ -126,6 +128,7 @@ void EventsFunctionsExtension::UnserializeExtensionDeclarationFrom(
   previewIconUrl = element.GetStringAttribute("previewIconUrl");
   iconUrl = element.GetStringAttribute("iconUrl");
   helpPath = element.GetStringAttribute("helpPath");
+  gdevelopVersion = element.GetStringAttribute("gdevelopVersion");
 
   if (element.HasChild("origin")) {
     gd::String originName =
@@ -205,7 +208,8 @@ void EventsFunctionsExtension::UnserializeExtensionDeclarationFrom(
 void EventsFunctionsExtension::UnserializeExtensionImplementationFrom(
     gd::Project& project,
     const SerializerElement& element) {
-  UnserializeEventsFunctionsFrom(project, element.GetChild("eventsFunctions"));
+  eventsFunctionsContainer.UnserializeEventsFunctionsFrom(
+      project, element.GetChild("eventsFunctions"));
   eventsBasedBehaviors.UnserializeElementsFrom(
       "eventsBasedBehavior", project, element.GetChild("eventsBasedBehaviors"));
 

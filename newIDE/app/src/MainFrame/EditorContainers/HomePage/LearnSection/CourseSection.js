@@ -115,7 +115,7 @@ const CourseSection = ({
     false
   );
   const firstIncompleteChapterIdRef = React.useRef<string | null>(
-    courseChapters.reduce((alreadyFoundIncompleteChapterId, chapter) => {
+    courseChapters.reduce((alreadyFoundIncompleteChapterId, chapter, index) => {
       if (alreadyFoundIncompleteChapterId)
         return alreadyFoundIncompleteChapterId;
       const chapterCompletion = getChapterCompletion(chapter.id);
@@ -124,6 +124,12 @@ const CourseSection = ({
         !chapterCompletion ||
         chapterCompletion.completedTasks < chapterCompletion.tasks
       ) {
+        if (index === 0) {
+          // If first chapter is not complete, either the user never started the course
+          // or they didn't complete it. Either way, do not scroll so that they
+          // can still see the course's title and introduction.
+          return 'BEGINNER';
+        }
         return chapter.id;
       }
       return null;
@@ -167,7 +173,7 @@ const CourseSection = ({
             style={textEllipsisStyle}
             color={chapter.isLocked ? 'secondary' : 'primary'}
           >
-            {chapter.title}
+            {chapter.shortTitle || chapter.title}
           </Text>
         </Line>
         {chapter.isLocked ? (
@@ -254,6 +260,7 @@ const CourseSection = ({
   React.useEffect(
     () => {
       if (firstIncompleteChapterIdRef.current) {
+        if (firstIncompleteChapterIdRef.current === 'BEGINNER') return;
         scrollToChapter(firstIncompleteChapterIdRef.current);
       }
     },
@@ -323,7 +330,7 @@ const CourseSection = ({
                       style={styles.desktopTableOfContent}
                     >
                       <Text noMargin size="sub-title">
-                        Chapters
+                        <Trans>Chapters</Trans>
                       </Text>
                       {courseCompletion !== null && (
                         <Line noMargin>

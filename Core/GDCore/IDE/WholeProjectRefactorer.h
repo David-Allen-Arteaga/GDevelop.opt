@@ -32,6 +32,7 @@ class UnfilledRequiredBehaviorPropertyProblem;
 class ProjectBrowser;
 class SerializerElement;
 class ProjectScopedContainers;
+class InitialInstancesContainer;
 struct VariablesRenamingChangesetNode;
 }  // namespace gd
 
@@ -80,11 +81,21 @@ class GD_CORE_API WholeProjectRefactorer {
 
   /**
    * \brief Refactor the project according to the changes (renaming or deletion)
-   * made to variables.
+   * made to global or scene variables.
    */
   static void ApplyRefactoringForVariablesContainer(
       gd::Project &project, gd::VariablesContainer &variablesContainer,
       const gd::VariablesChangeset &changeset,
+      const gd::SerializerElement &originalSerializedVariables);
+
+  /**
+   * \brief Refactor the project according to the changes (renaming or deletion)
+   * made to object variables.
+   */
+  static void ApplyRefactoringForObjectVariablesContainer(
+      gd::Project &project, gd::VariablesContainer &objectVariablesContainer,
+      gd::InitialInstancesContainer &initialInstancesContainer,
+      const gd::String &objectName, const gd::VariablesChangeset &changeset,
       const gd::SerializerElement &originalSerializedVariables);
 
   /**
@@ -94,6 +105,7 @@ class GD_CORE_API WholeProjectRefactorer {
   static void ApplyRefactoringForGroupVariablesContainer(
       gd::Project &project, gd::ObjectsContainer &globalObjectsContainer,
       gd::ObjectsContainer &objectsContainer,
+      gd::InitialInstancesContainer &initialInstancesContainer,
       const gd::VariablesContainer &groupVariablesContainer,
       const gd::ObjectGroup &objectGroup,
       const gd::VariablesChangeset &changeset,
@@ -192,6 +204,16 @@ class GD_CORE_API WholeProjectRefactorer {
                   const gd::String &newParameterName);
 
   /**
+   * \brief Refactor the function **after** a parameter has changed of type.
+   */
+  static void
+  ChangeParameterType(gd::Project &project,
+                      gd::ProjectScopedContainers &projectScopedContainers,
+                      gd::EventsFunction &eventsFunction,
+                      const gd::ObjectsContainer &parameterObjectsContainer,
+                      const gd::String &parameterName);
+
+  /**
    * \brief Refactor the project **before** an events function parameter
    * is moved.
    *
@@ -282,6 +304,26 @@ class GD_CORE_API WholeProjectRefactorer {
       const gd::EventsBasedObject& eventsBasedObject,
       const gd::String& oldPropertyName,
       const gd::String& newPropertyName);
+
+  /**
+   * \brief Refactor the project **after** a property of a behavior has
+   * changed of type.
+   */
+  static void ChangeEventsBasedBehaviorPropertyType(
+      gd::Project &project,
+      const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+      const gd::EventsBasedBehavior &eventsBasedBehavior,
+      const gd::String &propertyName);
+
+  /**
+   * \brief Refactor the project **after** a property of an object has
+   * changed of type.
+   */
+  static void ChangeEventsBasedObjectPropertyType(
+      gd::Project &project,
+      const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+      const gd::EventsBasedObject &eventsBasedObject,
+      const gd::String &propertyName);
 
   /**
    * \brief Add a behavior to an object and add required behaviors if necessary

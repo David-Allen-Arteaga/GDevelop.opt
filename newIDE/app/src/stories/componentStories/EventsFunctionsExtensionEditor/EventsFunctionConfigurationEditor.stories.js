@@ -29,12 +29,13 @@ export const DefaultFreeFunction = () => (
       eventsFunction={testProject.testEventsFunction}
       eventsBasedBehavior={null}
       eventsBasedObject={null}
-      eventsFunctionsContainer={testProject.testEventsFunctionsExtension}
+      eventsFunctionsContainer={testProject.testEventsFunctionsExtension.getEventsFunctions()}
       eventsFunctionsExtension={testProject.testEventsFunctionsExtension}
       onParametersOrGroupsUpdated={action('Parameters or groups were updated')}
       onFunctionParameterWillBeRenamed={action(
         'onFunctionParameterWillBeRenamed'
       )}
+      onFunctionParameterTypeChanged={action('onFunctionParameterTypeChanged')}
     />
   </FixedHeightFlexContainer>
 );
@@ -58,6 +59,7 @@ export const DefaultBehaviorFunction = () => (
       onFunctionParameterWillBeRenamed={action(
         'onFunctionParameterWillBeRenamed'
       )}
+      onFunctionParameterTypeChanged={action('onFunctionParameterTypeChanged')}
     />
   </FixedHeightFlexContainer>
 );
@@ -81,6 +83,7 @@ export const DefaultBehaviorLifecycleFunction = () => (
       onFunctionParameterWillBeRenamed={action(
         'onFunctionParameterWillBeRenamed'
       )}
+      onFunctionParameterTypeChanged={action('onFunctionParameterTypeChanged')}
     />
   </FixedHeightFlexContainer>
 );
@@ -104,6 +107,7 @@ export const DefaultObjectFunction = () => (
       onFunctionParameterWillBeRenamed={action(
         'onFunctionParameterWillBeRenamed'
       )}
+      onFunctionParameterTypeChanged={action('onFunctionParameterTypeChanged')}
     />
   </FixedHeightFlexContainer>
 );

@@ -97,6 +97,7 @@ type Props = {|
   isSceneProperties?: boolean,
   onPropertiesUpdated?: () => void,
   onRenameProperty: (oldName: string, newName: string) => void,
+  onPropertyTypeChanged: (propertyName: string) => void,
   onEventsFunctionsAdded: () => void,
   behaviorObjectType?: string,
 |};
@@ -136,6 +137,7 @@ export default function EventsBasedBehaviorPropertiesEditor({
   isSceneProperties,
   onPropertiesUpdated,
   onRenameProperty,
+  onPropertyTypeChanged,
   onEventsFunctionsAdded,
   behaviorObjectType,
 }: Props) {
@@ -709,6 +711,9 @@ export default function EventsBasedBehaviorPropertiesEditor({
                                             );
                                           }
                                           forceUpdate();
+                                          onPropertyTypeChanged(
+                                            property.getName()
+                                          );
                                           onPropertiesUpdated &&
                                             onPropertiesUpdated();
                                         }}
@@ -730,11 +735,6 @@ export default function EventsBasedBehaviorPropertiesEditor({
                                           label={t`Boolean (checkbox)`}
                                         />
                                         <SelectOption
-                                          key="property-type-animationname"
-                                          value="AnimationName"
-                                          label={t`Animation name (text)`}
-                                        />
-                                        <SelectOption
                                           key="property-type-choice"
                                           value="Choice"
                                           label={t`String from a list of options (text)`}
@@ -743,6 +743,21 @@ export default function EventsBasedBehaviorPropertiesEditor({
                                           key="property-type-color"
                                           value="Color"
                                           label={t`Color (text)`}
+                                        />
+                                        <SelectOption
+                                          key="property-type-object-animation-name"
+                                          value="ObjectAnimationName"
+                                          label={t`Object animation (text)`}
+                                        />
+                                        <SelectOption
+                                          key="property-type-keyboard-key"
+                                          value="KeyboardKey"
+                                          label={t`Keyboard key (text)`}
+                                        />
+                                        <SelectOption
+                                          key="property-type-text-area"
+                                          value="MultilineString"
+                                          label={t`Multiline text`}
                                         />
                                         <SelectOption
                                           key="property-type-resource"
@@ -809,7 +824,10 @@ export default function EventsBasedBehaviorPropertiesEditor({
                                       {(property.getType() === 'String' ||
                                         property.getType() === 'Number' ||
                                         property.getType() ===
-                                          'AnimationName') && (
+                                          'ObjectAnimationName' ||
+                                        property.getType() === 'KeyboardKey' ||
+                                        property.getType() ===
+                                          'MultilineString') && (
                                         <SemiControlledTextField
                                           commitOnBlur
                                           floatingLabelText={
@@ -827,6 +845,10 @@ export default function EventsBasedBehaviorPropertiesEditor({
                                             onPropertiesUpdated &&
                                               onPropertiesUpdated();
                                           }}
+                                          multiline={
+                                            property.getType() ===
+                                            'MultilineString'
+                                          }
                                           fullWidth
                                         />
                                       )}

@@ -37,6 +37,8 @@ export enum VariablesContainer_SourceType {
   Local = 4,
   ExtensionGlobal = 5,
   ExtensionScene = 6,
+  Parameters = 7,
+  Properties = 8,
 }
 
 export enum ObjectsContainer_SourceType {
@@ -113,6 +115,7 @@ export class VectorString extends EmscriptenObject {
   at(index: number): string;
   set(index: number, str: string): void;
   clear(): void;
+  toJSArray(): Array<string>;
 }
 
 export class VectorPlatformExtension extends EmscriptenObject {
@@ -334,7 +337,6 @@ export class Variable extends EmscriptenObject {
 }
 
 export class VariablesContainer extends EmscriptenObject {
-  constructor();
   constructor(sourceType: VariablesContainer_SourceType);
   getSourceType(): VariablesContainer_SourceType;
   has(name: string): boolean;
@@ -360,7 +362,9 @@ export class VariablesContainer extends EmscriptenObject {
 export class VariablesContainersList extends EmscriptenObject {
   has(name: string): boolean;
   get(name: string): Variable;
-  getVariablesContainerFromVariableName(variableName: string): VariablesContainer;
+  getVariablesContainerFromVariableOrPropertyOrParameterName(variableName: string): VariablesContainer;
+  getVariablesContainerFromVariableOrPropertyName(variableName: string): VariablesContainer;
+  getVariablesContainerFromVariableNameOnly(variableName: string): VariablesContainer;
   getVariablesContainer(index: number): VariablesContainer;
   getVariablesContainersCount(): number;
 }
@@ -377,7 +381,7 @@ export class ObjectGroup extends EmscriptenObject {
   unserializeFrom(element: SerializerElement): void;
 }
 
-export class GroupVariableHelper extends EmscriptenObject {
+export class ObjectVariableHelper extends EmscriptenObject {
   static mergeVariableContainers(objectsContainersList: ObjectsContainersList, objectGroup: ObjectGroup): VariablesContainer;
   static fillAnyVariableBetweenObjects(globalObjectsContainer: ObjectsContainer, objectsContainer: ObjectsContainer, objectGroup: ObjectGroup): void;
 }
@@ -638,9 +642,9 @@ export class ProjectScopedContainers extends EmscriptenObject {
   static makeNewProjectScopedContainersForProjectAndLayout(project: Project, layout: Layout): ProjectScopedContainers;
   static makeNewProjectScopedContainersForProject(project: Project): ProjectScopedContainers;
   static makeNewProjectScopedContainersForEventsFunctionsExtension(project: Project, eventsFunctionsExtension: EventsFunctionsExtension): ProjectScopedContainers;
-  static makeNewProjectScopedContainersForFreeEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer): ProjectScopedContainers;
-  static makeNewProjectScopedContainersForBehaviorEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer): ProjectScopedContainers;
-  static makeNewProjectScopedContainersForObjectEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer): ProjectScopedContainers;
+  static makeNewProjectScopedContainersForFreeEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer, parameterVariablesContainer: VariablesContainer): ProjectScopedContainers;
+  static makeNewProjectScopedContainersForBehaviorEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer, parameterVariablesContainer: VariablesContainer, propertyVariablesContainer: VariablesContainer): ProjectScopedContainers;
+  static makeNewProjectScopedContainersForObjectEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer, parameterVariablesContainer: VariablesContainer, propertyVariablesContainer: VariablesContainer): ProjectScopedContainers;
   static makeNewProjectScopedContainersForEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, outputObjectsContainer: ObjectsContainer): ProjectScopedContainers;
   static makeNewProjectScopedContainersWithLocalVariables(projectScopedContainers: ProjectScopedContainers, event: BaseEvent): ProjectScopedContainers;
   addPropertiesContainer(propertiesContainer: PropertiesContainer): ProjectScopedContainers;
@@ -1255,6 +1259,8 @@ export class SharedPtrSerializerElement extends EmscriptenObject {
 export class Serializer extends EmscriptenObject {
   static toJSON(element: SerializerElement): string;
   static fromJSON(json: string): SerializerElement;
+  static fromJSObject(object: Object): gdSerializerElement;
+  static toJSObject(element: gdSerializerElement): any;
 }
 
 export class ObjectAssetSerializer extends EmscriptenObject {
@@ -1697,7 +1703,6 @@ export class PlatformExtension extends EmscriptenObject {
   getLicense(): string;
   getHelpPath(): string;
   getIconUrl(): string;
-  isBuiltin(): boolean;
   getNameSpace(): string;
   addDuplicatedAction(newActionName: string, copiedActionName: string): InstructionMetadata;
   addDuplicatedCondition(newConditionName: string, copiedConditionName: string): InstructionMetadata;
@@ -1920,7 +1925,8 @@ export class VariablesChangeset extends EmscriptenObject {
 export class WholeProjectRefactorer extends EmscriptenObject {
   static computeChangesetForVariablesContainer(oldSerializedVariablesContainer: SerializerElement, newVariablesContainer: VariablesContainer): VariablesChangeset;
   static applyRefactoringForVariablesContainer(project: Project, newVariablesContainer: VariablesContainer, changeset: VariablesChangeset, originalSerializedVariables: SerializerElement): void;
-  static applyRefactoringForGroupVariablesContainer(project: Project, globalObjectsContainer: ObjectsContainer, objectsContainer: ObjectsContainer, groupVariablesContainer: VariablesContainer, objectGroup: ObjectGroup, changeset: VariablesChangeset, originalSerializedVariables: SerializerElement): void;
+  static applyRefactoringForObjectVariablesContainer(project: Project, objectVariablesContainer: VariablesContainer, initialInstancesContainer: InitialInstancesContainer, objectName: string, changeset: VariablesChangeset, originalSerializedVariables: SerializerElement): void;
+  static applyRefactoringForGroupVariablesContainer(project: Project, globalObjectsContainer: ObjectsContainer, objectsContainer: ObjectsContainer, initialInstancesContainer: InitialInstancesContainer, groupVariablesContainer: VariablesContainer, objectGroup: ObjectGroup, changeset: VariablesChangeset, originalSerializedVariables: SerializerElement): void;
   static renameEventsFunctionsExtension(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
   static updateExtensionNameInEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, sourceExtensionName: string): void;
   static updateExtensionNameInEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, sourceExtensionName: string): void;
@@ -1928,12 +1934,15 @@ export class WholeProjectRefactorer extends EmscriptenObject {
   static renameBehaviorEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, oldName: string, newName: string): void;
   static renameObjectEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, oldName: string, newName: string): void;
   static renameParameter(project: Project, projectScopedContainers: ProjectScopedContainers, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer, oldName: string, newName: string): void;
+  static changeParameterType(project: Project, projectScopedContainers: ProjectScopedContainers, eventsFunction: EventsFunction, parameterObjectsContainer: ObjectsContainer, parameterName: string): void;
   static moveEventsFunctionParameter(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, functionName: string, oldIndex: number, newIndex: number): void;
   static moveBehaviorEventsFunctionParameter(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, functionName: string, oldIndex: number, newIndex: number): void;
   static moveObjectEventsFunctionParameter(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, functionName: string, oldIndex: number, newIndex: number): void;
   static renameEventsBasedBehaviorProperty(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, oldName: string, newName: string): void;
   static renameEventsBasedBehaviorSharedProperty(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, oldName: string, newName: string): void;
+  static changeEventsBasedBehaviorPropertyType(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, propertyName: string): void;
   static renameEventsBasedObjectProperty(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, oldName: string, newName: string): void;
+  static changeEventsBasedObjectPropertyType(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, propertyName: string): void;
   static renameEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
   static updateBehaviorNameInEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, sourceBehaviorName: string): void;
   static renameEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
@@ -1979,6 +1988,10 @@ export class WholeProjectRefactorer extends EmscriptenObject {
   static findAllLeaderboardIds(project: Project): SetString;
 }
 
+export class ObjectTools extends EmscriptenObject {
+  static isBehaviorCompatibleWithObject(platform: Platform, objectType: string, behaviorType: string): boolean;
+}
+
 export class EventsBasedObjectDependencyFinder extends EmscriptenObject {
   static isDependentFromEventsBasedObject(project: Project, eventsBasedObject: EventsBasedObject, dependency: EventsBasedObject): boolean;
 }
@@ -1996,6 +2009,10 @@ export class UsedExtensionsResult extends EmscriptenObject {
 
 export class UsedExtensionsFinder extends EmscriptenObject {
   static scanProject(project: Project): UsedExtensionsResult;
+}
+
+export class ExampleExtensionUsagesFinder extends EmscriptenObject {
+  static getUsedExtensions(project: Project): SetString;
 }
 
 export class InstructionsCountEvaluator extends EmscriptenObject {
@@ -2051,7 +2068,9 @@ export class MetadataProvider extends EmscriptenObject {
   static getObjectStrExpressionMetadata(p: Platform, objectType: string, type: string): ExpressionMetadata;
   static getBehaviorStrExpressionMetadata(p: Platform, autoType: string, type: string): ExpressionMetadata;
   static isBadExpressionMetadata(metadata: ExpressionMetadata): boolean;
+  static isBadInstructionMetadata(metadata: InstructionMetadata): boolean;
   static isBadBehaviorMetadata(metadata: BehaviorMetadata): boolean;
+  static isBadObjectMetadata(metadata: ObjectMetadata): boolean;
 }
 
 export class ProjectDiagnostic extends EmscriptenObject {
@@ -2339,6 +2358,7 @@ export class EventsFunctionsExtension extends EmscriptenObject {
   addSourceFile(): SourceFileMetadata;
   removeSourceFileAt(index: number): void;
   getAllSourceFiles(): VectorSourceFileMetadata;
+  getEventsFunctions(): EventsFunctionsContainer;
   getGlobalVariables(): VariablesContainer;
   getSceneVariables(): VariablesContainer;
   getEventsBasedBehaviors(): EventsBasedBehaviorsList;
@@ -2346,15 +2366,6 @@ export class EventsFunctionsExtension extends EmscriptenObject {
   serializeTo(element: SerializerElement): void;
   unserializeFrom(project: Project, element: SerializerElement): void;
   static isExtensionLifecycleEventsFunction(eventsFunctionName: string): boolean;
-  insertNewEventsFunction(name: string, pos: number): EventsFunction;
-  insertEventsFunction(eventsFunction: EventsFunction, pos: number): EventsFunction;
-  hasEventsFunctionNamed(name: string): boolean;
-  getEventsFunction(name: string): EventsFunction;
-  getEventsFunctionAt(pos: number): EventsFunction;
-  removeEventsFunction(name: string): void;
-  moveEventsFunction(oldIndex: number, newIndex: number): void;
-  getEventsFunctionsCount(): number;
-  getEventsFunctionPosition(eventsFunction: EventsFunction): number;
 }
 
 export class AbstractFileSystem extends EmscriptenObject {}
@@ -2863,6 +2874,7 @@ export class PreviewExportOptions extends EmscriptenObject {
   useWebsocketDebuggerClientWithServerAddress(address: string, port: string): PreviewExportOptions;
   useWindowMessageDebuggerClient(): PreviewExportOptions;
   useMinimalDebuggerClient(): PreviewExportOptions;
+  setInAppTutorialMessageInPreview(message: string, position: string): PreviewExportOptions;
   setLayoutName(layoutName: string): PreviewExportOptions;
   setFallbackAuthor(id: string, username: string): PreviewExportOptions;
   setAuthenticatedPlayer(playerId: string, playerUsername: string, playerToken: string): PreviewExportOptions;
