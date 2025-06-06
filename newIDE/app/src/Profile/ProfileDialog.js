@@ -25,15 +25,14 @@ import Link from '../UI/Link';
 import CreditsStatusBanner from '../Credits/CreditsStatusBanner';
 
 type Props = {|
-  open: boolean,
   onClose: () => void,
 |};
 
-const ProfileDialog = ({ open, onClose }: Props) => {
+const ProfileDialog = ({ onClose }: Props) => {
+  const authenticatedUser = React.useContext(AuthenticatedUserContext);
   const badgesSeenNotificationTimeoutRef = React.useRef<?TimeoutID>(null);
   const badgesSeenNotificationSentRef = React.useRef<boolean>(false);
-  const authenticatedUser = React.useContext(AuthenticatedUserContext);
-  const { subscriptionPlansWithPricingSystems } = useSubscriptionPlans({
+  const { getSubscriptionPlansWithPricingSystems } = useSubscriptionPlans({
     includeLegacy: true,
     authenticatedUser,
   });
@@ -113,11 +112,12 @@ const ProfileDialog = ({ open, onClose }: Props) => {
 
   React.useEffect(
     () => {
-      if (open) authenticatedUser.onRefreshUserProfile();
+      authenticatedUser.onRefreshUserProfile();
     },
     // We don't want to fetch again when authenticatedUser changes,
     // just the first time this page opens.
-    [authenticatedUser.onRefreshUserProfile, open] // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [authenticatedUser.onRefreshUserProfile]
   );
 
   const onLogout = React.useCallback(
@@ -162,7 +162,7 @@ const ProfileDialog = ({ open, onClose }: Props) => {
         ),
       ]}
       onRequestClose={onClose}
-      open={open}
+      open
       fullHeight={!!isConnected}
       maxWidth={isConnected ? 'md' : 'sm'}
       flexColumnBody
@@ -184,9 +184,7 @@ const ProfileDialog = ({ open, onClose }: Props) => {
             {isStudentAccount ? null : (
               <SubscriptionDetails
                 subscription={authenticatedUser.subscription}
-                subscriptionPlansWithPricingSystems={
-                  subscriptionPlansWithPricingSystems
-                }
+                subscriptionPlansWithPricingSystems={getSubscriptionPlansWithPricingSystems()}
                 onManageSubscription={onManageSubscription}
                 isManageSubscriptionLoading={isManageSubscriptionLoading}
               />
@@ -227,8 +225,6 @@ const ProfileDialog = ({ open, onClose }: Props) => {
                 <UserAchievements
                   achievements={authenticatedUser.achievements}
                   badges={authenticatedUser.badges}
-                  displayUnclaimedAchievements
-                  displayNotifications
                 />
               </div>
             )}

@@ -73,7 +73,8 @@ declare class libGDevelop {
   VariablesContainer: Class<gdVariablesContainer>;
   VariablesContainersList: Class<gdVariablesContainersList>;
   ObjectGroup: Class<gdObjectGroup>;
-  GroupVariableHelper: Class<gdGroupVariableHelper>;
+  ObjectVariableHelper: Class<gdObjectVariableHelper>;
+  EventsBasedObjectVariantHelper: Class<gdEventsBasedObjectVariantHelper>;
   ObjectGroupsContainer: Class<gdObjectGroupsContainer>;
   PlatformSpecificAssets: Class<gdPlatformSpecificAssets>;
   LoadingScreen: Class<gdLoadingScreen>;
@@ -184,10 +185,12 @@ declare class libGDevelop {
   ResourceExposer: Class<gdResourceExposer>;
   VariablesChangeset: Class<gdVariablesChangeset>;
   WholeProjectRefactorer: Class<gdWholeProjectRefactorer>;
+  ObjectTools: Class<gdObjectTools>;
   EventsBasedObjectDependencyFinder: Class<gdEventsBasedObjectDependencyFinder>;
   PropertyFunctionGenerator: Class<gdPropertyFunctionGenerator>;
   UsedExtensionsResult: Class<gdUsedExtensionsResult>;
   UsedExtensionsFinder: Class<gdUsedExtensionsFinder>;
+  ExampleExtensionUsagesFinder: Class<gdExampleExtensionUsagesFinder>;
   InstructionsCountEvaluator: Class<gdInstructionsCountEvaluator>;
   ExtensionAndBehaviorMetadata: Class<gdExtensionAndBehaviorMetadata>;
   ExtensionAndObjectMetadata: Class<gdExtensionAndObjectMetadata>;
@@ -220,6 +223,8 @@ declare class libGDevelop {
   EventsBasedBehavior: Class<gdEventsBasedBehavior>;
   EventsBasedBehaviorsList: Class<gdEventsBasedBehaviorsList>;
   EventsBasedObject: Class<gdEventsBasedObject>;
+  EventsBasedObjectVariant: Class<gdEventsBasedObjectVariant>;
+  EventsBasedObjectVariantsContainer: Class<gdEventsBasedObjectVariantsContainer>;
   EventsBasedObjectsList: Class<gdEventsBasedObjectsList>;
   PropertiesContainer: Class<gdPropertiesContainer>;
   EventsFunctionsExtension: Class<gdEventsFunctionsExtension>;

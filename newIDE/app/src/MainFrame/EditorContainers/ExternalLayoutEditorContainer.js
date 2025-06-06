@@ -138,6 +138,20 @@ export class ExternalLayoutEditorContainer extends React.Component<
     }
   }
 
+  onSceneObjectsDeleted(scene: gdLayout) {
+    const { editor } = this;
+    const externalLayout = this.getExternalLayout();
+    if (!externalLayout) {
+      return;
+    }
+    if (externalLayout.getAssociatedLayout() !== scene.getName()) {
+      return;
+    }
+    if (editor) {
+      editor.forceUpdateObjectsList();
+    }
+  }
+
   getExternalLayout(): ?gdExternalLayout {
     const { project, projectItemName } = this.props;
     if (!project || !projectItemName) return null;
@@ -235,6 +249,7 @@ export class ExternalLayoutEditorContainer extends React.Component<
             layout={layout}
             eventsFunctionsExtension={null}
             eventsBasedObject={null}
+            eventsBasedObjectVariant={null}
             globalObjectsContainer={project.getObjects()}
             objectsContainer={layout.getObjects()}
             layersContainer={layout.getLayers()}
@@ -259,11 +274,22 @@ export class ExternalLayoutEditorContainer extends React.Component<
             onOpenEventBasedObjectEditor={
               this.props.onOpenEventBasedObjectEditor
             }
+            onOpenEventBasedObjectVariantEditor={
+              this.props.onOpenEventBasedObjectVariantEditor
+            }
             onObjectEdited={objectWithContext =>
               this.props.onSceneObjectEdited(layout, objectWithContext)
             }
+            onObjectsDeleted={() => this.props.onSceneObjectsDeleted(layout)}
+            // It's only used to refresh events-based object variants.
+            onObjectGroupEdited={() => {}}
+            onObjectGroupsDeleted={() => {}}
             // Nothing to do as events-based objects can't have external layout.
             onEventsBasedObjectChildrenEdited={() => {}}
+            onExtensionInstalled={this.props.onExtensionInstalled}
+            onDeleteEventsBasedObjectVariant={
+              this.props.onDeleteEventsBasedObjectVariant
+            }
           />
         )}
         {!layout && (

@@ -23,7 +23,6 @@ import PreferencesContext from '../../../Preferences/PreferencesContext';
 import RecommendationList from './RecommendationList';
 import ErrorBoundary from '../../../../UI/ErrorBoundary';
 import { delay } from '../../../../Utils/Delay';
-import { type SubscriptionPlanWithPricingSystems } from '../../../../Utils/GDevelopServices/Usage';
 import Checkbox from '../../../../UI/Checkbox';
 import { sendUserSurveyCompleted } from '../../../../Utils/Analytics/EventSender';
 import { type NewProjectSetup } from '../../../../ProjectCreation/NewProjectSetupDialog';
@@ -60,12 +59,12 @@ type Props = {|
   onUserSurveyStarted: () => void,
   onUserSurveyHidden: () => void,
   selectInAppTutorial: (tutorialId: string) => void,
-  subscriptionPlansWithPricingSystems: ?(SubscriptionPlanWithPricingSystems[]),
   onOpenProfile: () => void,
   onCreateProjectFromExample: (
     exampleShortHeader: ExampleShortHeader,
     newProjectSetup: NewProjectSetup,
-    i18n: I18nType
+    i18n: I18nType,
+    isQuickCustomization?: boolean
   ) => Promise<void>,
   askToCloseProject: () => Promise<boolean>,
 |};
@@ -74,7 +73,6 @@ const GetStartedSection = ({
   selectInAppTutorial,
   onUserSurveyStarted,
   onUserSurveyHidden,
-  subscriptionPlansWithPricingSystems,
   onOpenProfile,
   onCreateProjectFromExample,
   askToCloseProject,
@@ -128,11 +126,6 @@ const GetStartedSection = ({
     },
     [authenticatedUser.authenticated]
   );
-
-  const shouldDisplayAnnouncements =
-    !authenticatedUser.limits ||
-    !authenticatedUser.limits.capabilities.classrooms ||
-    !authenticatedUser.limits.capabilities.classrooms.hidePlayTab;
 
   if (
     (creatingOrLoggingInAccount || loginState === 'loggingIn') &&
@@ -247,16 +240,10 @@ const GetStartedSection = ({
   if (step === 'recommendations') {
     return (
       <>
-        <SectionContainer
-          flexBody
-          showUrgentAnnouncements={shouldDisplayAnnouncements}
-        >
+        <SectionContainer flexBody showUrgentAnnouncements>
           <RecommendationList
             authenticatedUser={authenticatedUser}
             selectInAppTutorial={selectInAppTutorial}
-            subscriptionPlansWithPricingSystems={
-              subscriptionPlansWithPricingSystems
-            }
             onOpenProfile={onOpenProfile}
             onStartSurvey={
               profile

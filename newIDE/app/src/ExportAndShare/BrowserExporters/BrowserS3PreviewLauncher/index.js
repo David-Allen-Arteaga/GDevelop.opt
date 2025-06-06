@@ -185,6 +185,13 @@ export default class BrowserS3PreviewLauncher extends React.Component<
       previewExportOptions.setProjectTemplateSlug(project.getTemplateSlug());
       previewExportOptions.setSourceGameId(this.props.sourceGameId);
 
+      if (previewOptions.inAppTutorialMessageInPreview) {
+        previewExportOptions.setInAppTutorialMessageInPreview(
+          previewOptions.inAppTutorialMessageInPreview,
+          previewOptions.inAppTutorialMessagePositionInPreview
+        );
+      }
+
       if (previewOptions.fallbackAuthor) {
         previewExportOptions.setFallbackAuthor(
           previewOptions.fallbackAuthor.id,
@@ -222,10 +229,12 @@ export default class BrowserS3PreviewLauncher extends React.Component<
 
       // Change the HTML file displayed by the preview window so that it starts loading
       // the game.
-      previewWindows.forEach(
-        (previewWindow: WindowProxy) =>
-          (previewWindow.location = outputDir + '/index.html')
-      );
+      previewWindows.forEach((previewWindow: WindowProxy) => {
+        previewWindow.location = outputDir + '/index.html';
+        try {
+          previewWindow.focus();
+        } catch (e) {}
+      });
 
       // If the preview windows are new, register them so that they can be accessed
       // by the debugger and for the captures to be detected when they close.

@@ -1,8 +1,12 @@
 // @flow
 import axios from 'axios';
+import { type I18n as I18nType } from '@lingui/core';
 import { GDevelopUsageApi } from './ApiConfigs';
 import { type MessageDescriptor } from '../i18n/MessageDescriptor.flow';
-import { type MessageByLocale } from '../i18n/MessageByLocale';
+import {
+  selectMessageByLocale,
+  type MessageByLocale,
+} from '../i18n/MessageByLocale';
 import { extractGDevelopApiErrorStatusAndCode } from './Errors';
 import { isNativeMobileApp } from '../Platform';
 
@@ -77,6 +81,8 @@ export type Capabilities = {|
     allowedIdPrefixes: Array<string>,
   },
   classrooms?: {
+    hideAskAi: boolean,
+    hideAnnouncements: boolean,
     hidePlayTab: boolean,
     hideSocials: boolean,
     hidePremiumProducts: boolean,
@@ -181,6 +187,7 @@ export type SubscriptionPlan = {|
     unlimited?: true,
     upcoming?: true,
     trialLike?: true,
+    displayInSummary?: true,
   |}>,
 
   pillarNamesPerLocale: { [key: string]: MessageByLocale },
@@ -199,6 +206,17 @@ export interface UserEarningsBalance {
   minAmountToCashoutInMilliUSDs: number;
   updatedAt: number;
 }
+
+export type SummarizedPlanFeature = {|
+  displayedFeatureName: string,
+  description?: string,
+  tooltip?: string,
+  enabled?: 'yes' | 'no',
+  unlimited?: true,
+  upcoming?: true,
+  trialLike?: true,
+  displayInSummary?: true,
+|};
 
 export const EDUCATION_PLAN_MIN_SEATS = 5;
 export const EDUCATION_PLAN_MAX_SEATS = 300;
@@ -412,7 +430,6 @@ export const changeUserSubscription = async (
     '/subscription-v2',
     {
       ...newSubscriptionDetails,
-      prohibitSeamlessUpdate: true,
       cancelImmediately: options.cancelImmediately,
       cancelReasons: options.cancelReasons,
     },
@@ -602,3 +619,51 @@ export const shouldHideClassroomTab = (limits: ?Limits) =>
 
 export const canUseCloudProjectHistory = (limits: ?Limits): boolean =>
   limits && limits.capabilities.versionHistory.enabled ? true : false;
+
+export function getSummarizedSubscriptionPlanFeatures(
+  i18n: I18nType,
+  plan: SubscriptionPlanWithPricingSystems
+): SummarizedPlanFeature[] {
+  const summarizedFeatures: SummarizedPlanFeature[] = [];
+
+  plan.fullFeatures.forEach(feature => {
+    let planFeature: ?SummarizedPlanFeature = null;
+
+    const featureNameByLocale = plan.featureNamesByLocale[feature.featureName];
+    if (!featureNameByLocale) {
+      // Couldn't find the feature name.
+      return;
+    }
+    if (!feature.displayInSummary) {
+      // Don't display this feature in the summary.
+      return;
+    }
+
+    planFeature = {
+      displayedFeatureName: selectMessageByLocale(i18n, featureNameByLocale),
+    };
+
+    if (feature.enabled) {
+      planFeature.enabled = feature.enabled;
+    }
+    if (feature.unlimited) {
+      planFeature.unlimited = feature.unlimited;
+    }
+    if (feature.upcoming) {
+      planFeature.upcoming = feature.upcoming;
+    }
+    if (feature.trialLike) {
+      planFeature.trialLike = feature.trialLike;
+    }
+    if (feature.descriptionByLocale) {
+      planFeature.description = selectMessageByLocale(
+        i18n,
+        feature.descriptionByLocale
+      );
+    }
+
+    summarizedFeatures.push(planFeature);
+  });
+
+  return summarizedFeatures;
+}

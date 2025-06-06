@@ -241,7 +241,7 @@ const useCreateProject = ({
           }
 
           onProjectSaved(fileMetadata);
-          unsavedChanges.sealUnsavedChanges({ setCheckpointTime: true });
+          unsavedChanges.sealUnsavedChanges();
           if (newProjectSetup.storageProvider.internalName === 'LocalFile') {
             preferences.setHasProjectOpened(true);
           }
@@ -314,12 +314,14 @@ const useCreateProject = ({
     async (
       exampleShortHeader: ExampleShortHeader,
       newProjectSetup: NewProjectSetup,
-      i18n: I18nType
+      i18n: I18nType,
+      isQuickCustomization?: boolean
     ) => {
       beforeCreatingProject();
       const newProjectSource = await createNewProjectFromExampleShortHeader({
         i18n,
         exampleShortHeader,
+        isQuickCustomization,
       });
       await createProject(newProjectSource, newProjectSetup);
     },
@@ -413,13 +415,31 @@ const useCreateProject = ({
   );
 
   const createProjectFromCourseChapter = React.useCallback(
-    async (courseChapter: CourseChapter, newProjectSetup: NewProjectSetup) => {
+    async ({
+      courseChapter,
+      templateId,
+      newProjectSetup,
+    }: {|
+      courseChapter: CourseChapter,
+      templateId?: string,
+      newProjectSetup: NewProjectSetup,
+    |}) => {
       if (courseChapter.isLocked) return;
       beforeCreatingProject();
-      const { templateUrl } = courseChapter;
+      let templateUrl;
+      if (courseChapter.templateUrl) {
+        templateUrl = courseChapter.templateUrl;
+      } else if (courseChapter.templates) {
+        const matchingTemplate = courseChapter.templates.find(
+          template => template.id === templateId
+        );
+        if (matchingTemplate) templateUrl = matchingTemplate.url;
+      }
       if (!templateUrl) {
         throw new Error(
-          `No template URL for the course chapter "${courseChapter.id}"`
+          `No template URL for the course chapter "${
+            courseChapter.id
+          }" and template id "${templateId || 'undefined'}"`
         );
       }
       const newProjectSource = await createNewProjectFromCourseChapterTemplate(

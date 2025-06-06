@@ -58,6 +58,13 @@ const useCourses = () => {
     [getAuthorizationHeader]
   );
 
+  const [selectedCourseId, setSelectedCourseId] = React.useState<string | null>(
+    null
+  );
+  const [userProgressByCourseId, setUserProgressByCourseId] = React.useState<{|
+    [courseId: string]: ?UserCourseProgress,
+  |}>({});
+
   const [
     userCourseProgress,
     setUserCourseProgress,
@@ -67,13 +74,13 @@ const useCourses = () => {
     updateUserCourseProgress
   );
 
-  const [isLoadingChapters, setIsLoadingChapters] = React.useState<boolean>(
+  const [areChaptersReady, setAreChaptersReady] = React.useState<boolean>(
     false
   );
-  const [
-    courseChapters,
-    setCourseChapters,
-  ] = React.useState<?(CourseChapter[])>(null);
+
+  const [chaptersByCourseId, setChaptersByCourseId] = React.useState<{|
+    [courseId: string]: CourseChapter[],
+  |}>({});
   const userId = profile ? profile.id : null;
 
   const fetchCourses = React.useCallback(async () => {
@@ -81,11 +88,21 @@ const useCourses = () => {
     setCourses(fetchedCourses);
   }, []);
 
-  const selectedCourse = courses ? courses[0] : null;
+  const onSelectCourse = React.useCallback(
+    (courseId: string | null) => {
+      if (!courseId) {
+        setUserCourseProgressImmediately(null);
+      } else {
+        const userProgress = userProgressByCourseId[courseId];
+        setUserCourseProgressImmediately(userProgress || null);
+      }
+      setSelectedCourseId(courseId);
+    },
+    [userProgressByCourseId, setUserCourseProgressImmediately]
+  );
 
   const fetchCourseChapters = React.useCallback(
     async (courseId: string) => {
-      setIsLoadingChapters(true);
       try {
         const [fetchedChapters, userProgress] = await Promise.all([
           listCourseChapters(getAuthorizationHeader, {
@@ -106,39 +123,31 @@ const useCourses = () => {
             }
           })(),
         ]);
-        setUserCourseProgressImmediately(userProgress);
-        setCourseChapters(fetchedChapters);
-      } finally {
-        setIsLoadingChapters(false);
+        setUserProgressByCourseId(currentProgressByCourseId => ({
+          ...currentProgressByCourseId,
+          [courseId]: userProgress,
+        }));
+        setChaptersByCourseId(currentChaptersByCourseId => ({
+          ...currentChaptersByCourseId,
+          [courseId]: fetchedChapters,
+        }));
+      } catch (error) {
+        console.error(
+          `An error occurred while fetching chapters for course ${courseId}:`,
+          error
+        );
       }
     },
     // A subscription change will change the displayed chapters sent by the backend.
     // So the user subscription is added as a dependency to make sure the chapters are
     // up to date with the user subscription.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      getAuthorizationHeader,
-      userId,
-      subscription,
-      setUserCourseProgressImmediately,
-      userLanguage2LetterCode,
-    ]
-  );
-
-  React.useEffect(
-    () => {
-      if (!selectedCourse) {
-        setCourseChapters(null);
-        return;
-      }
-      fetchCourseChapters(selectedCourse.id);
-    },
-    [selectedCourse, fetchCourseChapters]
+    [getAuthorizationHeader, userId, subscription, userLanguage2LetterCode]
   );
 
   const onCompleteTask = React.useCallback(
     (chapterId: string, taskIndex: number, completed: boolean) => {
-      if (!selectedCourse) return;
+      if (!selectedCourseId) return;
       if (!userId) {
         onOpenLoginDialog();
         return;
@@ -147,7 +156,7 @@ const useCourses = () => {
       const newUserCourseProgress: UserCourseProgress = userCourseProgress
         ? { ...userCourseProgress }
         : {
-            courseId: selectedCourse.id,
+            courseId: selectedCourseId,
             userId,
             progress: [],
           };
@@ -175,11 +184,15 @@ const useCourses = () => {
         }
       }
       setUserCourseProgress(newUserCourseProgress);
+      setUserProgressByCourseId(currentUserProgressByCourseId => ({
+        ...currentUserProgressByCourseId,
+        [selectedCourseId]: newUserCourseProgress,
+      }));
     },
     [
       userCourseProgress,
       userId,
-      selectedCourse,
+      selectedCourseId,
       setUserCourseProgress,
       onOpenLoginDialog,
     ]
@@ -200,17 +213,21 @@ const useCourses = () => {
   );
 
   const getChapterCompletion = React.useCallback(
-    (chapterId: string): CourseChapterCompletion | null => {
-      if (!courseChapters) return null;
+    (courseId: string, chapterId: string): CourseChapterCompletion | null => {
+      const chapters = chaptersByCourseId[courseId];
+      if (!chapters) return null;
 
-      const chapter = courseChapters.find(chapter => chapter.id === chapterId);
+      const chapter = chapters.find(chapter => chapter.id === chapterId);
       if (!chapter || chapter.isLocked) return null;
 
-      const tasksCount = chapter.tasks.length;
+      const tasksCount = chapter.tasks
+        ? chapter.tasks.length
+        : chapter.items.filter(item => item.type === 'task').length;
 
-      if (!userCourseProgress) return { completedTasks: 0, tasks: tasksCount };
+      const courseProgress = userProgressByCourseId[courseId];
+      if (!courseProgress) return { completedTasks: 0, tasks: tasksCount };
 
-      const chapterProgress = userCourseProgress.progress.find(
+      const chapterProgress = courseProgress.progress.find(
         chapterProgress => chapterProgress.chapterId === chapterId
       );
       if (!chapterProgress) return { completedTasks: 0, tasks: tasksCount };
@@ -220,33 +237,44 @@ const useCourses = () => {
         tasks: tasksCount,
       };
     },
-    [userCourseProgress, courseChapters]
+    [userProgressByCourseId, chaptersByCourseId]
   );
 
   const getCourseCompletion = React.useCallback(
-    (): CourseCompletion | null => {
-      if (!courseChapters || !selectedCourse) return null;
-      const chaptersCount = selectedCourse.chaptersTargetCount;
-      if (!userCourseProgress)
+    (courseId: string): CourseCompletion | null => {
+      if (!courses) return null;
+      const course = courses.find(course => course.id === courseId);
+      if (!course) return null;
+
+      const chapters = chaptersByCourseId[courseId];
+      if (!chapters) return null;
+
+      const chaptersCount = course.chaptersTargetCount;
+      const courseProgress = userProgressByCourseId[courseId];
+      if (!courseProgress)
         return { percentage: 0, completedChapters: 0, chapters: chaptersCount };
 
       let completion = 0;
       let completedChapters = 0;
       const chapterProportion = 1 / chaptersCount;
-      courseChapters.forEach(chapter => {
+      chapters.forEach(chapter => {
         if (chapter.isLocked) return;
 
-        const chapterProgress = userCourseProgress.progress.find(
+        const chapterProgress = courseProgress.progress.find(
           chapterProgress => chapterProgress.chapterId === chapter.id
         );
         if (!chapterProgress) return;
 
+        const tasksCount = chapter.tasks
+          ? chapter.tasks.length
+          : chapter.items.filter(item => item.type === 'task').length;
+
         const isChapterCompleted =
-          chapterProgress.completedTasks.length >= chapter.tasks.length;
+          chapterProgress.completedTasks.length >= tasksCount;
         if (isChapterCompleted) completedChapters++;
 
         completion +=
-          (chapterProgress.completedTasks.length / chapter.tasks.length) *
+          (chapterProgress.completedTasks.length / tasksCount) *
           chapterProportion;
       });
 
@@ -256,7 +284,7 @@ const useCourses = () => {
         completedChapters,
       };
     },
-    [userCourseProgress, courseChapters, selectedCourse]
+    [userProgressByCourseId, chaptersByCourseId, courses]
   );
 
   const onBuyCourseChapterWithCredits = React.useCallback(
@@ -318,7 +346,7 @@ const useCourses = () => {
             userId,
             password,
           });
-          if (selectedCourse) await fetchCourseChapters(selectedCourse.id);
+          if (selectedCourseId) await fetchCourseChapters(selectedCourseId);
         },
         successMessage: <Trans>🎉 You can now follow your new chapter!</Trans>,
       });
@@ -332,22 +360,38 @@ const useCourses = () => {
       getAuthorizationHeader,
       onOpenLoginDialog,
       fetchCourseChapters,
-      selectedCourse,
+      selectedCourseId,
     ]
   );
 
   React.useEffect(
     () => {
-      fetchCourses();
+      (async () => {
+        if (courses) {
+          await Promise.all(
+            courses.map(course => fetchCourseChapters(course.id))
+          );
+          setAreChaptersReady(true);
+        }
+      })();
     },
-    [fetchCourses]
+    // (Re)fetch course chapters when courses are defined and when fetchCourseChapters
+    // changes (see its dependencies).
+    [courses, fetchCourseChapters]
   );
+
+  const selectedCourse =
+    selectedCourseId && courses && areChaptersReady
+      ? courses.find(course => course.id === selectedCourseId) || null
+      : null;
 
   return {
     courses,
-    courseChapters,
+    fetchCourses,
+    onSelectCourse,
     selectedCourse,
-    isLoadingChapters,
+    courseChaptersByCourseId: chaptersByCourseId,
+    areChaptersReady,
     onCompleteTask,
     isTaskCompleted,
     getChapterCompletion,

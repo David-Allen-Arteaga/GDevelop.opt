@@ -8,6 +8,9 @@ import { useLongTouch } from '../Utils/UseLongTouch';
 import GDevelopThemeContext from './Theme/GDevelopThemeContext';
 import { dataObjectToProps, type HTMLDataset } from '../Utils/HTMLDataset';
 import Cross from './CustomSvgIcons/Cross';
+import useForceUpdate from '../Utils/UseForceUpdate';
+
+const WINDOW_NON_DRAGGABLE_PART_CLASS_NAME = 'title-bar-non-draggable-part';
 
 const styles = {
   tabContentContainer: {
@@ -19,7 +22,6 @@ const styles = {
     flex: 1,
   },
   tabLabel: {
-    maxWidth: 360,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -33,9 +35,6 @@ const styles = {
   tabLabelAndIcon: {
     display: 'flex',
     alignItems: 'center',
-    marginLeft: 10,
-    // 12 instead of 10 to even the perceived margin of the home tab (the only not-closable tab).
-    marginRight: 12,
   },
   closeButton: {
     marginRight: 5,
@@ -45,6 +44,7 @@ const styles = {
 
 type TabContentContainerProps = {|
   active: boolean,
+  removePointerEvents?: boolean,
   children: React.Node,
 |};
 
@@ -69,6 +69,7 @@ export class TabContentContainer extends React.Component<TabContentContainerProp
         style={{
           ...styles.tabContentContainer,
           ...(active ? undefined : { display: 'none' }),
+          pointerEvents: this.props.removePointerEvents ? 'none' : undefined,
         }}
       >
         {children}
@@ -79,13 +80,15 @@ export class TabContentContainer extends React.Component<TabContentContainerProp
 
 type ClosableTabsProps = {|
   hideLabels?: boolean,
-  children: React.Node,
+  renderTabs: ({| containerWidth: number |}) => React.Node,
 |};
 
-export const ClosableTabs = ({ hideLabels, children }: ClosableTabsProps) => {
+export const ClosableTabs = ({ hideLabels, renderTabs }: ClosableTabsProps) => {
+  const forceUpdate = useForceUpdate();
   const containerRef = React.useRef<?HTMLDivElement>(null);
   const tabItemContainerStyle = {
     maxWidth: '100%', // Tabs should take all width
+    flex: 1,
     display: hideLabels ? 'none' : 'flex',
     flexWrap: 'nowrap', // Single line of tab...
     overflowX: 'overlay', // ...scroll horizontally if needed
@@ -100,6 +103,18 @@ export const ClosableTabs = ({ hideLabels, children }: ClosableTabsProps) => {
     }
   }, []);
 
+  const containerWidth = containerRef.current
+    ? containerRef.current.clientWidth
+    : null;
+
+  React.useLayoutEffect(
+    () => {
+      // Force a re-render the first time after we know the container width.
+      forceUpdate();
+    },
+    [forceUpdate]
+  );
+
   return (
     <div
       ref={containerRef}
@@ -107,7 +122,7 @@ export const ClosableTabs = ({ hideLabels, children }: ClosableTabsProps) => {
       style={tabItemContainerStyle}
       onWheel={onScroll}
     >
-      {children}
+      {containerWidth !== null ? renderTabs({ containerWidth }) : null}
     </div>
   );
 };
@@ -125,6 +140,8 @@ export type ClosableTabProps = {|
   onCloseAll: () => void,
   onClick: () => void,
   onActivated: () => void,
+  onHover: (boolean, options: {| isLabelTruncated: boolean |}) => void,
+  maxWidth: number,
 |};
 
 export function ClosableTab({
@@ -140,6 +157,8 @@ export function ClosableTab({
   closable,
   onClick,
   onActivated,
+  onHover,
+  maxWidth,
 }: ClosableTabProps) {
   React.useEffect(
     () => {
@@ -150,6 +169,20 @@ export function ClosableTab({
     [active, onActivated]
   );
   const contextMenu = React.useRef<?ContextMenuInterface>(null);
+  const spanLabelRef = React.useRef<?HTMLSpanElement>(null);
+  const [isLabelTruncated, setIsLabelTruncated] = React.useState(false);
+
+  React.useEffect(
+    () => {
+      if (maxWidth && spanLabelRef.current) {
+        setIsLabelTruncated(
+          spanLabelRef.current.scrollWidth > spanLabelRef.current.clientWidth
+        );
+      }
+      // Update when maxWidth changes.
+    },
+    [maxWidth]
+  );
 
   const openContextMenu = event => {
     event.stopPropagation();
@@ -193,6 +226,14 @@ export function ClosableTab({
       ? 0.022
       : 0.224;
 
+  const labelMaxWidth = Math.max(
+    0.1, // No negative max-width, which would actually not enforce any max width.
+    (maxWidth || 320) -
+    20 /* Close button */ -
+    32 /* Icon */ -
+      9 /* Extra margins */
+  );
+
   return (
     <React.Fragment>
       <span
@@ -220,6 +261,11 @@ export function ClosableTab({
             ? gdevelopTheme.closableTabs.backgroundColor
             : gdevelopTheme.closableTabs.selectedBackgroundColor,
         }}
+        // A tab lives in the top bar, which has the ability to drag the app window.
+        // Ensure the tab does not have this ability, as it can be dragged itself.
+        className={WINDOW_NON_DRAGGABLE_PART_CLASS_NAME}
+        onMouseEnter={() => onHover(true, { isLabelTruncated })}
+        onMouseLeave={() => onHover(false, { isLabelTruncated })}
       >
         <ButtonBase
           onClick={onClick}
@@ -240,14 +286,6 @@ export function ClosableTab({
               height: gdevelopTheme.closableTabs.height,
               color: textColor,
               fontFamily: gdevelopTheme.closableTabs.fontFamily,
-              marginLeft:
-                icon || renderCustomIcon
-                  ? closable
-                    ? 0
-                    : styles.tabLabelAndIcon.marginLeft -
-                      styles.tabIcon.marginRight
-                  : styles.tabLabelAndIcon.marginLeft,
-              marginRight: closable ? 0 : styles.tabLabelAndIcon.marginRight,
             }}
           >
             {icon || renderCustomIcon ? (
@@ -255,7 +293,17 @@ export function ClosableTab({
                 {renderCustomIcon ? renderCustomIcon(brightness) : icon}
               </span>
             ) : null}
-            {label && <span style={styles.tabLabel}>{label}</span>}
+            {label && (
+              <span
+                ref={spanLabelRef}
+                style={{
+                  ...styles.tabLabel,
+                  maxWidth: labelMaxWidth,
+                }}
+              >
+                {label}
+              </span>
+            )}
           </span>
         </ButtonBase>
         {closable && (

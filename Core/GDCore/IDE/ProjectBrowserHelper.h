@@ -19,6 +19,7 @@ class ArbitraryEventsFunctionsWorker;
 class ArbitraryObjectsWorker;
 class ArbitraryEventBasedBehaviorsWorker;
 class ArbitraryBehaviorSharedDataWorker;
+class VariablesContainer;
 } // namespace gd
 
 namespace gd {
@@ -55,6 +56,15 @@ public:
   static void
   ExposeProjectEventsWithoutExtensions(gd::Project &project,
                                        gd::ArbitraryEventsWorker &worker);
+
+  /**
+   * \brief Call the specified worker on all events of the project (layout and
+   * external events) but not events from extensions.
+   *
+   * Only use this for stats.
+   */
+  static void ExposeProjectEventsWithoutExtensions(
+      gd::Project &project, gd::ArbitraryEventsWorkerWithContext &worker);
 
   /**
    * \brief Call the specified worker on all events of a layout and
@@ -129,6 +139,20 @@ public:
 
   /**
    * \brief Call the specified worker on all events of the event-based
+   * behavior.
+   *
+   * This should be the preferred way to traverse all the events of an
+   * event-based behavior.
+   */
+  static void ExposeEventsBasedBehaviorEvents(
+      gd::Project &project,
+      const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+      const gd::EventsBasedBehavior &eventsBasedBehavior,
+      gd::VariablesContainer &propertyVariablesContainer,
+      gd::ArbitraryEventsWorkerWithContext &worker);
+
+  /**
+   * \brief Call the specified worker on all events of the event-based
    * object.
    *
    * This should be the preferred way to traverse all the events of an
@@ -150,6 +174,20 @@ public:
       gd::Project &project,
       const gd::EventsFunctionsExtension &eventsFunctionsExtension,
       const gd::EventsBasedObject &eventsBasedObject,
+      gd::ArbitraryEventsWorkerWithContext &worker);
+
+  /**
+   * \brief Call the specified worker on all events of the event-based
+   * object.
+   *
+   * This should be the preferred way to traverse all the events of an
+   * event-based object.
+   */
+  static void ExposeEventsBasedObjectEvents(
+      gd::Project &project,
+      const gd::EventsFunctionsExtension &eventsFunctionsExtension,
+      const gd::EventsBasedObject &eventsBasedObject,
+      gd::VariablesContainer &propertyVariablesContainer,
       gd::ArbitraryEventsWorkerWithContext &worker);
 
   /**

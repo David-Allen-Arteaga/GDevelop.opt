@@ -98,13 +98,13 @@ namespace gdjs {
     }
 
     updatePosition(): void {
-      if (this._object.isWrapping()) {
+      if (this._object.isWrapping() && this._text.width !== 0) {
         const alignmentX =
           this._object._textAlign === 'right'
             ? 1
             : this._object._textAlign === 'center'
-            ? 0.5
-            : 0;
+              ? 0.5
+              : 0;
 
         const width = this._object.getWrappingWidth();
 
@@ -117,14 +117,13 @@ namespace gdjs {
         this._text.position.x = this._object.x + this._text.width / 2;
         this._text.anchor.x = 0.5;
       }
-      this._text.position.y = this._object.y + this._text.height / 2;
 
       const alignmentY =
         this._object._verticalTextAlignment === 'bottom'
           ? 1
           : this._object._verticalTextAlignment === 'center'
-          ? 0.5
-          : 0;
+            ? 0.5
+            : 0;
       this._text.position.y =
         this._object.y + this._text.height * (0.5 - alignmentY);
       this._text.anchor.y = 0.5;

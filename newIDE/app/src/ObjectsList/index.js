@@ -54,6 +54,8 @@ import {
 } from './ObjectFolderTreeViewItemContent';
 import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
 import { type HTMLDataset } from '../Utils/HTMLDataset';
+import type { MessageDescriptor } from '../Utils/i18n/MessageDescriptor.flow';
+import type { EventsScope } from '../InstructionOrExpression/EventsScope';
 
 const sceneObjectsRootFolderId = 'scene-objects';
 const globalObjectsRootFolderId = 'global-objects';
@@ -73,6 +75,33 @@ const styles = {
   },
   autoSizerContainer: { flex: 1 },
   autoSizer: { width: '100%' },
+};
+
+export const getLabelsForObjectsAndGroupsLists = (
+  scope: EventsScope
+): {|
+  localScopeObjectsTitle: MessageDescriptor,
+  higherScopeObjectsTitle: MessageDescriptor | null,
+  localScopeGroupsTitle: MessageDescriptor | null,
+  higherScopeGroupsTitle: MessageDescriptor | null,
+|} => {
+  if (scope.layout) {
+    return {
+      localScopeObjectsTitle: t`Scene Objects`,
+      higherScopeObjectsTitle: t`Global Objects`,
+      localScopeGroupsTitle: t`Scene Groups`,
+      higherScopeGroupsTitle: t`Global Groups`,
+    };
+  } else if (scope.eventsBasedObject) {
+    return {
+      localScopeObjectsTitle: t`Object's children`,
+      higherScopeObjectsTitle: null, // Global objects not accessible from custom object.
+      localScopeGroupsTitle: t`Object's groups`,
+      higherScopeGroupsTitle: null,
+    };
+  }
+
+  throw new Error('Scope not recognized.');
 };
 
 export const getTreeViewItemIdFromObjectFolderOrObject = (
@@ -251,6 +280,7 @@ class LabelTreeViewItemContent implements TreeViewItemContent {
               id: rightButton.id,
               label: i18n._(rightButton.label),
               click: rightButton.click,
+              enabled: rightButton.enabled,
             }
           : null,
         ...(buildMenuTemplateFunction ? buildMenuTemplateFunction() : []),
@@ -434,6 +464,11 @@ type Props = {|
     extensionName: string,
     eventsBasedObjectName: string
   ) => void,
+  onOpenEventBasedObjectVariantEditor: (
+    extensionName: string,
+    eventsBasedObjectName: string,
+    variantName: string
+  ) => void,
   onExportAssets: () => void,
   onObjectCreated: gdObject => void,
   onObjectEdited: ObjectWithContext => void,
@@ -450,6 +485,7 @@ type Props = {|
   ) => string,
   unsavedChanges?: ?UnsavedChanges,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps,
+  isListLocked: boolean,
 |};
 
 const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
@@ -473,6 +509,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
 
       onEditObject,
       onOpenEventBasedObjectEditor,
+      onOpenEventBasedObjectVariantEditor,
       onExportAssets,
       onObjectCreated,
       onObjectEdited,
@@ -484,6 +521,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
       getThumbnail,
       unsavedChanges,
       hotReloadPreviewButtonProps,
+      isListLocked,
     }: Props,
     ref
   ) => {
@@ -638,27 +676,42 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
 
     const onObjectsAddedFromAssets = React.useCallback(
       (objects: Array<gdObject>) => {
+        if (objects.length === 0) return;
+
         objects.forEach(object => {
           onObjectCreated(object);
         });
-        if (treeViewRef.current)
-          treeViewRef.current.openItems([sceneObjectsRootFolderId]);
 
+        // Here, the last object in the array might not be the last object
+        // in the tree view, given the fact that assets are added in parallel
+        // See (AssetPackInstallDialog.onInstallAssets).
         const lastObject = objects[objects.length - 1];
-        // A new object is always added to the scene (layout) by default.
-        const object = objectsContainer
-          .getRootFolder()
-          .getObjectChild(lastObject.getName());
 
+        if (newObjectDialogOpen && newObjectDialogOpen.from) {
+          const {
+            objectFolderOrObject: selectedObjectFolderOrObject,
+          } = newObjectDialogOpen.from;
+          if (treeViewRef.current) {
+            treeViewRef.current.openItems(
+              getFoldersAscendanceWithoutRootFolder(
+                selectedObjectFolderOrObject
+              ).map(folder => getObjectFolderTreeViewItemId(folder))
+            );
+          }
+        } else {
+          if (treeViewRef.current) {
+            treeViewRef.current.openItems([sceneObjectsRootFolderId]);
+          }
+        }
         // Scroll to the new object.
         // Ideally, we'd wait for the list to be updated to scroll, but
         // to simplify the code, we just wait a few ms for a new render
         // to be done.
         setTimeout(() => {
-          scrollToItem(getObjectTreeViewItemId(object.getObject()));
+          scrollToItem(getObjectTreeViewItemId(lastObject));
         }, 100); // A few ms is enough for a new render to be done.
       },
-      [objectsContainer, onObjectCreated, scrollToItem]
+      [onObjectCreated, scrollToItem, newObjectDialogOpen]
     );
 
     const swapObjectAsset = React.useCallback(
@@ -775,9 +828,9 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
 
         const answer = Window.showConfirmDialog(
           i18n._(
-            t`Global elements help to manage objects across multiple scenes and it is recommended for the most used objects. This action cannot be undone.
+            t`Global elements help manage objects across multiple scenes and are recommended for frequently used objects. This action cannot be undone.
 
-            Do you want to set as global object?`
+            Do you want to set this as global object?`
           )
         );
         if (!answer) return;
@@ -937,6 +990,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         onAddObjectInstance,
         initialInstances,
         onOpenEventBasedObjectEditor,
+        onOpenEventBasedObjectVariantEditor,
         getValidatedObjectOrGroupName,
         onRenameObjectFolderOrObjectWithContextFinish,
         onObjectModified,
@@ -950,6 +1004,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         addFolder,
         forceUpdateList,
         forceUpdate,
+        isListLocked,
       }),
       [
         project,
@@ -963,6 +1018,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         onAddObjectInstance,
         initialInstances,
         onOpenEventBasedObjectEditor,
+        onOpenEventBasedObjectVariantEditor,
         getValidatedObjectOrGroupName,
         onRenameObjectFolderOrObjectWithContextFinish,
         onObjectModified,
@@ -976,6 +1032,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         addFolder,
         forceUpdateList,
         forceUpdate,
+        isListLocked,
       ]
     );
 
@@ -997,6 +1054,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         showDeleteConfirmation,
         forceUpdateList,
         forceUpdate,
+        isListLocked,
       }),
       [
         project,
@@ -1015,6 +1073,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         showDeleteConfirmation,
         forceUpdateList,
         forceUpdate,
+        isListLocked,
       ]
     );
 
@@ -1022,6 +1081,14 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
       ? globalObjectsContainer.getRootFolder()
       : null;
     const objectsRootFolder = objectsContainer.getRootFolder();
+    const labels = React.useMemo(
+      () =>
+        getLabelsForObjectsAndGroupsLists(
+          projectScopedContainersAccessor.getScope()
+        ),
+      [projectScopedContainersAccessor]
+    );
+
     const getTreeViewData = React.useCallback(
       (i18n: I18nType): Array<TreeViewItem> => {
         const treeViewItems = [
@@ -1032,7 +1099,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
               isRoot: true,
               content: new LabelTreeViewItemContent(
                 globalObjectsRootFolderId,
-                i18n._(t`Global Objects`),
+                i18n._(labels.higherScopeObjectsTitle),
                 null,
                 () => [
                   {
@@ -1083,7 +1150,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
             isRoot: true,
             content: new LabelTreeViewItemContent(
               sceneObjectsRootFolderId,
-              i18n._(t`Scene Objects`),
+              i18n._(labels.localScopeObjectsTitle),
               {
                 icon: <Add />,
                 label: t`Add an object`,
@@ -1091,6 +1158,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
                   onAddNewObject(selectedObjectFolderOrObjectsWithContext[0]);
                 },
                 id: 'add-new-object-top-button',
+                enabled: !isListLocked,
               },
               () => [
                 {
@@ -1102,6 +1170,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
                         global: false,
                       },
                     ]),
+                  enabled: !isListLocked,
                 },
                 { type: 'separator' },
                 {
@@ -1132,15 +1201,18 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
         return treeViewItems;
       },
       [
+        globalObjectsRootFolder,
+        labels.higherScopeObjectsTitle,
+        labels.localScopeObjectsTitle,
+        objectTreeViewItemProps,
+        objectFolderTreeViewItemProps,
+        objectsRootFolder,
+        isListLocked,
         addFolder,
         expandFolders,
-        globalObjectsRootFolder,
-        objectFolderTreeViewItemProps,
-        objectTreeViewItemProps,
-        objectsRootFolder,
         onAddNewObject,
-        onExportAssets,
         selectedObjectFolderOrObjectsWithContext,
+        onExportAssets,
       ]
     );
 
@@ -1168,20 +1240,31 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
       () => {
         if (keyboardShortcutsRef.current) {
           keyboardShortcutsRef.current.setShortcutCallback('onDelete', () => {
-            deleteItem(selectedItems[0]);
+            if (!isListLocked) {
+              deleteItem(selectedItems[0]);
+            }
           });
           keyboardShortcutsRef.current.setShortcutCallback(
             'onDuplicate',
             () => {
-              duplicateItem(selectedItems[0]);
+              if (!isListLocked) {
+                duplicateItem(selectedItems[0]);
+              }
             }
           );
           keyboardShortcutsRef.current.setShortcutCallback('onRename', () => {
-            editName(selectedItems[0].content.getId());
+            if (!isListLocked) {
+              editName(selectedItems[0].content.getId());
+            }
           });
         }
       },
-      [selectedObjectFolderOrObjectsWithContext, editName, selectedItems]
+      [
+        selectedObjectFolderOrObjectsWithContext,
+        editName,
+        selectedItems,
+        isListLocked,
+      ]
     );
 
     const canMoveSelectionTo = React.useCallback(
@@ -1496,6 +1579,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
               }
               id="add-new-object-button"
               icon={<Add />}
+              disabled={isListLocked}
             />
           </Column>
         </Line>

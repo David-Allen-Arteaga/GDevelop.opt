@@ -25,6 +25,7 @@ type Props = {|
   projectScopedContainersAccessor: ProjectScopedContainersAccessor,
   globalObjectsContainer: gdObjectsContainer | null,
   objectsContainer: gdObjectsContainer,
+  initialInstances: gdInitialInstancesContainer | null,
   objectGroup: gdObjectGroup,
   onCancel: () => void,
   onApply: (selectedVariableName: string | null) => void,
@@ -33,6 +34,7 @@ type Props = {|
   shouldCreateInitiallySelectedVariable?: boolean,
   hotReloadPreviewButtonProps?: ?HotReloadPreviewButtonProps,
   onComputeAllVariableNames: () => Array<string>,
+  isListLocked: boolean,
 |};
 
 const ObjectGroupVariablesDialog = ({
@@ -40,6 +42,7 @@ const ObjectGroupVariablesDialog = ({
   projectScopedContainersAccessor,
   globalObjectsContainer,
   objectsContainer,
+  initialInstances,
   objectGroup,
   onCancel,
   onApply,
@@ -48,12 +51,13 @@ const ObjectGroupVariablesDialog = ({
   initiallySelectedVariableName,
   shouldCreateInitiallySelectedVariable,
   onComputeAllVariableNames,
+  isListLocked,
 }: Props) => {
   const groupVariablesContainer = useValueWithInit(
     // The VariablesContainer is returned by value.
     // Thus, the same instance is reused every time.
     () =>
-      gd.GroupVariableHelper.mergeVariableContainers(
+      gd.ObjectVariableHelper.mergeVariableContainers(
         projectScopedContainersAccessor.get().getObjectsContainersList(),
         objectGroup
       )
@@ -76,6 +80,11 @@ const ObjectGroupVariablesDialog = ({
           groupVariablesContainer
         )
     );
+    if (!initialInstances) {
+      // This can only happens for legacy function object groups.
+      // In this case, we don't do any refactoring.
+      return;
+    }
 
     const originalSerializedVariables = getOriginalVariablesSerializedElement();
     const changeset = gd.WholeProjectRefactorer.computeChangesetForVariablesContainer(
@@ -87,11 +96,22 @@ const ObjectGroupVariablesDialog = ({
       project,
       globalObjectsContainer || objectsContainer,
       objectsContainer,
+      initialInstances,
       groupVariablesContainer,
       objectGroup,
       changeset,
       originalSerializedVariables
     );
+    const { eventsBasedObject } = projectScopedContainersAccessor.getScope();
+    if (eventsBasedObject) {
+      for (const objectName of objectGroup.getAllObjectsNames().toJSArray()) {
+        gd.ObjectVariableHelper.applyChangesToVariants(
+          eventsBasedObject,
+          objectName,
+          changeset
+        );
+      }
+    }
     groupVariablesContainer.clearPersistentUuid();
   };
 
@@ -190,6 +210,7 @@ const ObjectGroupVariablesDialog = ({
           onComputeAllVariableNames={onComputeAllVariableNames}
           onVariablesUpdated={notifyOfVariableChange}
           onSelectedVariableChange={onSelectedVariableChange}
+          isListLocked={isListLocked}
         />
       </Column>
     </Dialog>

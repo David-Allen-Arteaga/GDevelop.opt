@@ -20,6 +20,7 @@ export type TestProject = {|
   spriteObjectWithoutBehaviors: gdObject,
   testSpriteObjectInstance: gdInitialInstance,
   testLayout: gdLayout,
+  testProjectScopedContainersAccessor: ProjectScopedContainersAccessor,
   testSceneProjectScopedContainersAccessor: ProjectScopedContainersAccessor,
   group1: gdObjectGroup,
   group2: gdObjectGroup,
@@ -658,10 +659,9 @@ export const makeTestProject = (gd /*: libGDevelop */) /*: TestProject */ => {
   testEventsFunctionsExtension.setDescription('My description');
 
   // Events function
-  const testEventsFunction = testEventsFunctionsExtension.insertNewEventsFunction(
-    'MyTestFunction',
-    0
-  );
+  const testEventsFunction = testEventsFunctionsExtension
+    .getEventsFunctions()
+    .insertNewEventsFunction('MyTestFunction', 0);
 
   testEventsFunction
     .getParameters()
@@ -688,8 +688,11 @@ export const makeTestProject = (gd /*: libGDevelop */) /*: TestProject */ => {
     .getEvents()
     .insertNewEvent(project, 'BuiltinCommonInstructions::Standard', 0);
 
-  testEventsFunctionsExtension.insertNewEventsFunction('MyTestFunction2', 1);
   testEventsFunctionsExtension
+    .getEventsFunctions()
+    .insertNewEventsFunction('MyTestFunction2', 1);
+  testEventsFunctionsExtension
+    .getEventsFunctions()
     .insertNewEventsFunction('MyPrivateTestFunction3', 2)
     .setPrivate(true);
 
@@ -900,6 +903,12 @@ export const makeTestProject = (gd /*: libGDevelop */) /*: TestProject */ => {
     'whatever-this-is-not-recognised'
   );
 
+  const testProjectScopedContainersAccessor = new ProjectScopedContainersAccessor(
+    {
+      project,
+    }
+  );
+
   const testSceneProjectScopedContainersAccessor = new ProjectScopedContainersAccessor(
     {
       project,
@@ -940,6 +949,7 @@ export const makeTestProject = (gd /*: libGDevelop */) /*: TestProject */ => {
     spriteObjectWithBehaviors,
     spriteObjectWithoutBehaviors,
     testLayout,
+    testProjectScopedContainersAccessor,
     testSceneProjectScopedContainersAccessor,
     group1,
     group2,

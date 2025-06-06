@@ -90,6 +90,10 @@ export class ExternalEventsEditorContainer extends React.Component<
     // No thing to be done.
   }
 
+  onSceneObjectsDeleted(scene: gdLayout) {
+    // No thing to be done.
+  }
+
   getExternalEvents(): ?gdExternalEvents {
     const { project, projectItemName } = this.props;
     if (!project || !projectItemName) return null;
@@ -200,6 +204,7 @@ export class ExternalEventsEditorContainer extends React.Component<
             onOpenExternalEvents={this.props.onOpenExternalEvents}
             isActive={this.props.isActive}
             hotReloadPreviewButtonProps={this.props.hotReloadPreviewButtonProps}
+            onExtensionInstalled={this.props.onExtensionInstalled}
           />
         )}
         {!layout && (

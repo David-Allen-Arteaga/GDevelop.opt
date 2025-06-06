@@ -2,6 +2,7 @@
 import axios from 'axios';
 import {
   GDevelopAssetApi,
+  GDevelopAssetCdn,
   GDevelopPrivateAssetsStorage,
   GDevelopPrivateGameTemplatesStorage,
   GDevelopPublicAssetResourcesStorageBaseUrl,
@@ -45,6 +46,10 @@ export type ExtensionDependency = {|
 export type ObjectAsset = {|
   object: any /*(serialized gdObjectConfiguration)*/,
   resources: Array<any /*(serialized gdResource)*/>,
+  variants?: Array<{
+    objectType: string,
+    variant: any /*(serialized gdEventsBasedObjectVariant)*/,
+  }>,
   // TODO This can become mandatory after the migration of the asset repository.
   requiredExtensions?: Array<ExtensionDependency>,
 |};
@@ -102,10 +107,10 @@ export type PrivateAssetPackAssetType =
   | 'sprite'
   | '9patch'
   | 'tiled'
-  | 'partial'
   | 'Scene3D::Model3DObject'
   | 'TileMap::SimpleTileMap'
-  | 'ParticleSystem::ParticleEmitter';
+  | 'ParticleSystem::ParticleEmitter'
+  | string;
 
 export type PrivateAssetPackContent = { [PrivateAssetPackAssetType]: number };
 
@@ -186,32 +191,115 @@ export type CourseChapterTask = {|
   answer?: { text?: string, imageUrls?: string[] },
 |};
 
-export type UnlockedCourseChapter = {|
+export type UnlockedVideoBasedCourseChapter = {|
   id: string,
   title: string,
+  shortTitle?: string,
   videoUrl: string,
   isLocked?: false,
+  isFree?: boolean,
   templateUrl: string,
   tasks: Array<CourseChapterTask>,
 |};
-export type LockedCourseChapter = {|
-  id: string,
-  title: string,
-  videoUrl: string,
-  isLocked: true,
-  priceInCredits?: number,
-  productId: string,
+
+export type TextBasedCourseChapterTextItem = {|
+  type: 'text',
+  text: string,
 |};
 
-export type CourseChapter = LockedCourseChapter | UnlockedCourseChapter;
+export type TextBasedCourseChapterImageItem = {|
+  type: 'image',
+  url: string,
+  caption?: string,
+|};
+export type TextBasedCourseChapterVideoItem = {|
+  type: 'video',
+  url: string,
+  caption?: string,
+|};
+
+export type TextBasedCourseChapterTaskItem = {|
+  type: 'task',
+  title: string,
+  items: Array<
+    | TextBasedCourseChapterTextItem
+    | TextBasedCourseChapterImageItem
+    | TextBasedCourseChapterVideoItem
+  >,
+  answer?: {
+    items: Array<
+      | TextBasedCourseChapterTextItem
+      | TextBasedCourseChapterImageItem
+      | TextBasedCourseChapterVideoItem
+    >,
+  },
+|};
+
+export type UnlockedTextBasedCourseChapter = {|
+  id: string,
+  title: string,
+  shortTitle?: string,
+  isLocked?: false,
+  isFree?: boolean,
+  templates: Array<{| url: string, title?: string | null, id: string |}>,
+  items: Array<
+    | TextBasedCourseChapterTextItem
+    | TextBasedCourseChapterImageItem
+    | TextBasedCourseChapterTaskItem
+    | TextBasedCourseChapterVideoItem
+  >,
+|};
+
+export type LockedVideoBasedCourseChapter = {|
+  isLocked: true,
+  isFree?: boolean,
+  // If not set, cannot be purchased with credits.
+  priceInCredits?: number,
+  productId: string,
+
+  id: string,
+  title: string,
+  shortTitle?: string,
+  videoUrl: string,
+|};
+
+export type LockedTextBasedCourseChapter = {|
+  isLocked: true,
+  isFree?: boolean,
+  // If not set, cannot be purchased with credits.
+  priceInCredits?: number,
+  productId: string,
+
+  id: string,
+  title: string,
+  shortTitle?: string,
+|};
+
+export type VideoBasedCourseChapter =
+  | LockedVideoBasedCourseChapter
+  | UnlockedVideoBasedCourseChapter;
+
+export type TextBasedCourseChapter =
+  | LockedTextBasedCourseChapter
+  | UnlockedTextBasedCourseChapter;
+
+export type CourseChapter =
+  | LockedVideoBasedCourseChapter
+  | LockedTextBasedCourseChapter
+  | UnlockedVideoBasedCourseChapter
+  | UnlockedTextBasedCourseChapter;
 
 export type Course = {|
   id: string,
+  durationInWeeks: number,
+  chaptersTargetCount: number,
+  specializationId: 'game-development' | 'interaction-design',
+  newUntil?: number,
+
+  imageUrlByLocale: MessageByLocale,
   titleByLocale: MessageByLocale,
   shortDescriptionByLocale: MessageByLocale,
   levelByLocale: MessageByLocale,
-  durationInWeeks: number,
-  chaptersTargetCount: number,
 |};
 
 export type UserCourseProgress = {|
@@ -237,12 +325,12 @@ export const doesAssetPackContainAudio = (
 /**
  * Check if the IDE version, passed as argument, satisfy the version required by the asset.
  */
-export const isCompatibleWithAsset = (
+export const isCompatibleWithGDevelopVersion = (
   ideVersion: string,
-  assetHeader: { gdevelopVersion: string }
+  assetRequiredGDevelopVersion: ?string
 ) =>
-  assetHeader.gdevelopVersion
-    ? semverSatisfies(ideVersion, assetHeader.gdevelopVersion, {
+  assetRequiredGDevelopVersion
+    ? semverSatisfies(ideVersion, assetRequiredGDevelopVersion, {
         includePrerelease: true,
       })
     : true;
@@ -258,7 +346,20 @@ export const listAllPublicAssets = async ({
     },
   });
 
-  const { assetShortHeadersUrl, filtersUrl, assetPacksUrl } = response.data;
+  const {
+    assetShortHeadersUrl,
+    filtersUrl,
+    assetPacksUrl,
+    assetCdn,
+  } = response.data;
+
+  // Overwrite the CDN from where public assets are served.
+  if (assetCdn.baseUrl) {
+    GDevelopAssetCdn.baseUrl['live'] =
+      assetCdn.baseUrl['live'] || GDevelopAssetCdn.baseUrl['live'];
+    GDevelopAssetCdn.baseUrl['staging'] =
+      assetCdn.baseUrl['staging'] || GDevelopAssetCdn.baseUrl['staging'];
+  }
 
   const responsesData = await Promise.all([
     client
@@ -300,16 +401,11 @@ export const getPublicAsset = async (
   assetShortHeader: AssetShortHeader,
   { environment }: {| environment: Environment |}
 ): Promise<Asset> => {
-  const response = await client.get(`/asset/${assetShortHeader.id}`, {
-    params: {
-      environment,
-    },
-  });
-  if (!response.data.assetUrl) {
-    throw new Error('Unexpected response from the asset endpoint.');
-  }
-
-  const assetResponse = await client.get(response.data.assetUrl);
+  const assetResponse = await client.get(
+    `${GDevelopAssetCdn.baseUrl[environment]}/assets/${
+      assetShortHeader.id
+    }.json`
+  );
   return assetResponse.data;
 };
 
@@ -588,6 +684,8 @@ export const listCourseChapters = async (
     });
     return response.data;
   }
-  const response = await client.get(`/course/${courseId}/chapter`);
+  const response = await client.get(`/course/${courseId}/chapter`, {
+    params: { lang },
+  });
   return response.data;
 };

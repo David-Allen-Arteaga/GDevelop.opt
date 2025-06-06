@@ -2,7 +2,7 @@
 import * as React from 'react';
 import DragAndDropContextProvider from '../UI/DragAndDrop/DragAndDropContextProvider';
 import AuthenticatedUserProvider from '../Profile/AuthenticatedUserProvider';
-import PublicProfileProvider from '../Profile/PublicProfileProvider';
+import { PublicProfileProvider } from '../Profile/PublicProfileContext';
 import Authentication from '../Utils/GDevelopServices/Authentication';
 import PreferencesProvider from './Preferences/PreferencesProvider';
 import PreferencesContext from './Preferences/PreferencesContext';
@@ -41,6 +41,7 @@ import { CreditsPackageStoreStateProvider } from '../AssetStore/CreditsPackages/
 import { ProductLicenseStoreStateProvider } from '../AssetStore/ProductLicense/ProductLicenseStoreContext';
 import { MarketingPlansStoreStateProvider } from '../MarketingPlans/MarketingPlansStoreContext';
 import { CourseChapterStoreStateProvider } from '../Course/CourseChapterStoreContext';
+import { Resource3DPreviewProvider } from '../ResourcesList/ResourcePreview/Resource3DPreviewContext';
 
 type Props = {|
   authentication: Authentication,
@@ -82,6 +83,7 @@ const Providers = ({
                         <AlertProvider>
                           <AuthenticatedUserProvider
                             authentication={authentication}
+                            preferencesValues={values}
                           >
                             <PublicProfileProvider>
                               <I18n update>
@@ -109,14 +111,22 @@ const Providers = ({
                                                     <CourseChapterStoreStateProvider>
                                                       <ProductLicenseStoreStateProvider>
                                                         <MarketingPlansStoreStateProvider>
-                                                          <ExtensionStoreStateProvider>
-                                                            <BehaviorStoreStateProvider>
+                                                          <ExtensionStoreStateProvider
+                                                            i18n={i18n}
+                                                          >
+                                                            <BehaviorStoreStateProvider
+                                                              i18n={i18n}
+                                                            >
                                                               <TutorialStateProvider>
                                                                 <AnnouncementsFeedStateProvider>
                                                                   <PrivateAssetsAuthorizationProvider>
-                                                                    {children({
-                                                                      i18n,
-                                                                    })}
+                                                                    <Resource3DPreviewProvider>
+                                                                      {children(
+                                                                        {
+                                                                          i18n,
+                                                                        }
+                                                                      )}
+                                                                    </Resource3DPreviewProvider>
                                                                   </PrivateAssetsAuthorizationProvider>
                                                                 </AnnouncementsFeedStateProvider>
                                                               </TutorialStateProvider>

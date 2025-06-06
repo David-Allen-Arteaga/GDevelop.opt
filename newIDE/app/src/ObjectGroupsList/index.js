@@ -26,6 +26,8 @@ import useForceUpdate from '../Utils/UseForceUpdate';
 import useAlertDialog from '../UI/Alert/useAlertDialog';
 import ErrorBoundary from '../UI/ErrorBoundary';
 import KeyboardShortcuts from '../UI/KeyboardShortcuts';
+import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
+import { getLabelsForObjectsAndGroupsLists } from '../ObjectsList';
 
 export const groupWithContextReactDndType = 'GD_GROUP_WITH_CONTEXT';
 
@@ -92,6 +94,7 @@ export type ObjectGroupsListInterface = {|
 type Props = {|
   globalObjectGroups: gdObjectGroupsContainer | null,
   objectGroups: gdObjectGroupsContainer,
+  projectScopedContainersAccessor: ProjectScopedContainersAccessor,
   onDeleteGroup: (groupWithContext: GroupWithContext, cb: Function) => void,
   onEditGroup: gdObjectGroup => void,
   onCreateGroup: () => void,
@@ -106,12 +109,14 @@ type Props = {|
   onGroupRenamed?: () => void,
   canSetAsGlobalGroup?: boolean,
   unsavedChanges?: ?UnsavedChanges,
+  isListLocked: boolean,
 |};
 
 const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
   (props, ref) => {
     const {
       globalObjectGroups,
+      projectScopedContainersAccessor,
       objectGroups,
       onCreateGroup,
       onDeleteGroup,
@@ -123,6 +128,7 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
       unsavedChanges,
       onEditGroup,
       canSetAsGlobalGroup,
+      isListLocked,
     } = props;
     const [
       selectedGroupWithContext,
@@ -322,9 +328,9 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
 
         const answer = await showConfirmation({
           title: t`Set as global group`,
-          message: t`Global elements help to manage objects across multiple scenes and it is recommended for the most used objects.
-          This action cannot be undone.
-          Do you want to set as global group?`,
+          message: t`Global elements help manage objects across multiple scenes and are recommended for frequently used objects. This action cannot be undone.
+
+            Do you want to set this as global group?`,
           confirmButtonLabel: t`Set as global`,
         });
         if (!answer) return;
@@ -468,6 +474,8 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
               {
                 label: i18n._(t`Duplicate`),
                 click: () => onDuplicate(item),
+                accelerator: 'CmdOrCtrl+D',
+                enabled: !isListLocked,
               },
               { type: 'separator' },
               {
@@ -478,31 +486,40 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
               {
                 label: i18n._(t`Rename`),
                 click: () => onEditName(item),
+                accelerator: 'F2',
+                enabled: !isListLocked,
               },
-              {
-                label: i18n._(t`Set as global group`),
-                enabled: !isGroupWithContextGlobal(item),
-                click: () => setAsGlobalGroup(item),
-                visible: canSetAsGlobalGroup !== false,
-              },
+              globalObjectGroups
+                ? {
+                    label: i18n._(t`Set as global group`),
+                    enabled: !isGroupWithContextGlobal(item) && !isListLocked,
+                    click: () => setAsGlobalGroup(item),
+                    visible: canSetAsGlobalGroup !== false,
+                  }
+                : null,
               {
                 label: i18n._(t`Delete`),
                 click: () => onDelete(item),
+                accelerator: 'Backspace',
+                enabled: !isListLocked,
               },
               { type: 'separator' },
               {
                 label: i18n._(t`Add a new group...`),
                 click: onCreateGroup,
+                enabled: !isListLocked,
               },
-            ],
+            ].filter(Boolean),
       [
-        onCreateGroup,
-        onEditName,
-        editItem,
-        onDelete,
-        onDuplicate,
+        isListLocked,
+        globalObjectGroups,
         canSetAsGlobalGroup,
+        onCreateGroup,
+        onDuplicate,
+        editItem,
+        onEditName,
         setAsGlobalGroup,
+        onDelete,
       ]
     );
 
@@ -514,9 +531,18 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
               label: i18n._(t`Add a new group`),
               click: onCreateGroup,
               id: 'add-new-group-top-button',
+              enabled: !isListLocked,
             }
           : null,
-      [onCreateGroup]
+      [isListLocked, onCreateGroup]
+    );
+
+    const labels = React.useMemo(
+      () =>
+        getLabelsForObjectsAndGroupsLists(
+          projectScopedContainersAccessor.getScope()
+        ),
+      [projectScopedContainersAccessor]
     );
 
     const getTreeViewData = React.useCallback(
@@ -533,7 +559,7 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
 
         const treeViewItems = [
           globalObjectGroups && {
-            label: i18n._(t`Global Groups`),
+            label: i18n._(labels.higherScopeGroupsTitle),
             children:
               globalObjectGroupsList.length > 0
                 ? globalObjectGroupsList
@@ -543,7 +569,7 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
             id: globalGroupsRootFolderId,
           },
           {
-            label: i18n._(t`Scene Groups`),
+            label: i18n._(labels.localScopeGroupsTitle),
             children:
               objectGroupsList.length > 0
                 ? objectGroupsList
@@ -556,30 +582,36 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
 
         return treeViewItems;
       },
-      [globalObjectGroups, objectGroups]
+      [globalObjectGroups, objectGroups, labels]
     );
 
     React.useEffect(
       () => {
         if (keyboardShortcutsRef.current) {
           keyboardShortcutsRef.current.setShortcutCallback('onDelete', () => {
-            if (!selectedGroupWithContext) return;
+            if (!selectedGroupWithContext || isListLocked) return;
             onDelete(selectedGroupWithContext);
           });
           keyboardShortcutsRef.current.setShortcutCallback(
             'onDuplicate',
             () => {
-              if (!selectedGroupWithContext) return;
+              if (!selectedGroupWithContext || isListLocked) return;
               onDuplicate(selectedGroupWithContext);
             }
           );
           keyboardShortcutsRef.current.setShortcutCallback('onRename', () => {
-            if (!selectedGroupWithContext) return;
+            if (!selectedGroupWithContext || isListLocked) return;
             onEditName(selectedGroupWithContext);
           });
         }
       },
-      [selectedGroupWithContext, onDelete, onDuplicate, onEditName]
+      [
+        selectedGroupWithContext,
+        onDelete,
+        onDuplicate,
+        onEditName,
+        isListLocked,
+      ]
     );
 
     // Force List component to be mounted again if globalObjectGroups or objectGroups
@@ -672,6 +704,7 @@ const ObjectGroupsList = React.forwardRef<Props, ObjectGroupsListInterface>(
               onClick={onCreateGroup}
               id="add-new-group-button"
               icon={<Add />}
+              disabled={isListLocked}
             />
           </Column>
         </Line>

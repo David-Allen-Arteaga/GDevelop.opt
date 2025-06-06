@@ -21,10 +21,13 @@ export const Default = () => (
     }
     globalObjectsContainer={testProject.project.getObjects()}
     objectsContainer={testProject.testLayout.getObjects()}
+    initialInstances={testProject.testLayout.getInitialInstances()}
     group={testProject.group2}
     onApply={action('onApply')}
     onCancel={action('onCancel')}
     onObjectGroupAdded={action('onObjectGroupAdded')}
+    isVariableListLocked={false}
+    isObjectListLocked={false}
   />
 );
 
@@ -36,10 +39,13 @@ export const WithLongObjectNames = () => (
     }
     globalObjectsContainer={testProject.project.getObjects()}
     objectsContainer={testProject.testLayout.getObjects()}
+    initialInstances={testProject.testLayout.getInitialInstances()}
     group={testProject.group4WithLongsNames}
     onApply={action('onApply')}
     onCancel={action('onCancel')}
     onObjectGroupAdded={action('onObjectGroupAdded')}
+    isVariableListLocked={false}
+    isObjectListLocked={false}
   />
 );
 
@@ -51,9 +57,12 @@ export const Empty = () => (
     }
     globalObjectsContainer={testProject.project.getObjects()}
     objectsContainer={testProject.testLayout.getObjects()}
+    initialInstances={testProject.testLayout.getInitialInstances()}
     group={null}
     onApply={action('onApply')}
     onCancel={action('onCancel')}
     onObjectGroupAdded={action('onObjectGroupAdded')}
+    isVariableListLocked={false}
+    isObjectListLocked={false}
   />
 );

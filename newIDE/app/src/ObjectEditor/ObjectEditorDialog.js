@@ -60,6 +60,23 @@ type Props = {|
   // Preview:
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps,
   openBehaviorEvents: (extensionName: string, behaviorName: string) => void,
+  onExtensionInstalled: (extensionName: string) => void,
+  onOpenEventBasedObjectEditor: (
+    extensionName: string,
+    eventsBasedObjectName: string
+  ) => void,
+  onOpenEventBasedObjectVariantEditor: (
+    extensionName: string,
+    eventsBasedObjectName: string,
+    variantName: string
+  ) => void,
+  onDeleteEventsBasedObjectVariant: (
+    eventsFunctionsExtension: gdEventsFunctionsExtension,
+    eventBasedObject: gdEventsBasedObject,
+    variant: gdEventsBasedObjectVariant
+  ) => void,
+  isBehaviorListLocked: boolean,
+  isVariableListLocked: boolean,
 |};
 
 type InnerDialogProps = {|
@@ -88,6 +105,12 @@ const InnerDialog = (props: InnerDialogProps) => {
     projectScopedContainersAccessor,
     onUpdateBehaviorsSharedData,
     onComputeAllVariableNames,
+    onExtensionInstalled,
+    onOpenEventBasedObjectEditor,
+    onOpenEventBasedObjectVariantEditor,
+    onDeleteEventsBasedObjectVariant,
+    isBehaviorListLocked,
+    isVariableListLocked,
   } = props;
   const [currentTab, setCurrentTab] = React.useState<ObjectEditorTab>(
     initialTab || 'properties'
@@ -120,6 +143,15 @@ const InnerDialog = (props: InnerDialogProps) => {
   const onApply = async () => {
     props.onApply();
 
+    const initialInstances =
+      (layout && layout.getInitialInstances()) ||
+      (eventsBasedObject && eventsBasedObject.getInitialInstances()) ||
+      null;
+    if (!initialInstances) {
+      // This can't actually happen.
+      return;
+    }
+
     const originalSerializedVariables = getOriginalContentSerializedElement().getChild(
       'variables'
     );
@@ -127,20 +159,21 @@ const InnerDialog = (props: InnerDialogProps) => {
       originalSerializedVariables,
       object.getVariables()
     );
-    if (changeset.hasRemovedVariables()) {
-      // While we support refactoring that would remove all references (actions, conditions...)
-      // it's both a bit dangerous for the user and we would need to show the user what
-      // will be removed before doing so. For now, just clear the removed variables so they don't
-      // trigger any refactoring.
-      changeset.clearRemovedVariables();
-    }
-
-    gd.WholeProjectRefactorer.applyRefactoringForVariablesContainer(
+    gd.WholeProjectRefactorer.applyRefactoringForObjectVariablesContainer(
       project,
       object.getVariables(),
+      initialInstances,
+      object.getName(),
       changeset,
       originalSerializedVariables
     );
+    if (eventsBasedObject) {
+      gd.ObjectVariableHelper.applyChangesToVariants(
+        eventsBasedObject,
+        object.getName(),
+        changeset
+      );
+    }
     object.clearPersistentUuid();
 
     // Do the renaming *after* applying changes, as "withSerializableObject"
@@ -282,6 +315,11 @@ const InnerDialog = (props: InnerDialogProps) => {
                 autoFocus="desktop"
               />
             )}
+            onOpenEventBasedObjectEditor={onOpenEventBasedObjectEditor}
+            onOpenEventBasedObjectVariantEditor={
+              onOpenEventBasedObjectVariantEditor
+            }
+            onDeleteEventsBasedObjectVariant={onDeleteEventsBasedObjectVariant}
           />
         </Column>
       ) : null}
@@ -297,6 +335,8 @@ const InnerDialog = (props: InnerDialogProps) => {
           onUpdateBehaviorsSharedData={onUpdateBehaviorsSharedData}
           onBehaviorsUpdated={notifyOfChange}
           openBehaviorEvents={askConfirmationAndOpenBehaviorEvents}
+          onExtensionInstalled={onExtensionInstalled}
+          isListLocked={isBehaviorListLocked}
         />
       )}
       {currentTab === 'variables' && (
@@ -323,6 +363,7 @@ const InnerDialog = (props: InnerDialogProps) => {
             helpPagePath={'/all-features/variables/object-variables'}
             onComputeAllVariableNames={onComputeAllVariableNames}
             onVariablesUpdated={notifyOfChange}
+            isListLocked={isVariableListLocked}
           />
         </Column>
       )}

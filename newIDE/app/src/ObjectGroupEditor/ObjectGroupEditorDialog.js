@@ -18,6 +18,7 @@ type Props = {|
   onObjectGroupAdded: (objectGroup: gdObjectGroup) => void,
   globalObjectsContainer: gdObjectsContainer | null,
   objectsContainer: gdObjectsContainer,
+  initialInstances: gdInitialInstancesContainer | null,
   /**
    * Event-based functions have an ObjectGroupContainer containing the groups,
    * but no ObjectsContainer. Instead, the ObjectsContainer is generated from
@@ -29,6 +30,8 @@ type Props = {|
   bypassedObjectGroupsContainer?: ?gdObjectGroupsContainer,
   initialTab?: ?ObjectGroupEditorTab,
   onComputeAllVariableNames?: () => Array<string>,
+  isVariableListLocked: boolean,
+  isObjectListLocked: boolean,
 |};
 
 const ObjectGroupEditorDialog = ({
@@ -40,9 +43,12 @@ const ObjectGroupEditorDialog = ({
   onObjectGroupAdded,
   globalObjectsContainer,
   objectsContainer,
+  initialInstances,
   bypassedObjectGroupsContainer,
   initialTab,
   onComputeAllVariableNames,
+  isVariableListLocked,
+  isObjectListLocked,
 }: Props) => {
   const [
     editedObjectGroup,
@@ -85,7 +91,7 @@ const ObjectGroupEditorDialog = ({
         objectGroup.addObject(objectName);
       }
       if (shouldSpreadAnyVariables) {
-        gd.GroupVariableHelper.fillAnyVariableBetweenObjects(
+        gd.ObjectVariableHelper.fillAnyVariableBetweenObjects(
           globalObjectsContainer || objectsContainer,
           objectsContainer,
           objectGroup
@@ -106,7 +112,8 @@ const ObjectGroupEditorDialog = ({
   );
 
   return !editedObjectGroup ||
-    editedObjectGroup.getAllObjectsNames().size() === 0 ? (
+    (editedObjectGroup.getAllObjectsNames().size() === 0 &&
+      !isObjectListLocked) ? (
     <NewObjectGroupEditorDialog
       project={project}
       projectScopedContainersAccessor={projectScopedContainersAccessor}
@@ -125,8 +132,11 @@ const ObjectGroupEditorDialog = ({
       onCancel={onCancel}
       globalObjectsContainer={globalObjectsContainer}
       objectsContainer={objectsContainer}
+      initialInstances={initialInstances}
       initialTab={selectedTab}
       onComputeAllVariableNames={onComputeAllVariableNames}
+      isVariableListLocked={isVariableListLocked}
+      isObjectListLocked={isObjectListLocked}
     />
   );
 };

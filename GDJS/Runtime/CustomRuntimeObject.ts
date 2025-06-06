@@ -12,6 +12,7 @@ namespace gdjs {
 
   export type CustomObjectConfiguration = ObjectConfiguration & {
     animatable?: SpriteAnimationData[];
+    variant: string;
     childrenContent: { [objectName: string]: ObjectConfiguration & any };
   };
 
@@ -28,7 +29,8 @@ namespace gdjs {
       gdjs.Resizable,
       gdjs.Scalable,
       gdjs.Flippable,
-      gdjs.OpacityHandler {
+      gdjs.OpacityHandler
+  {
     _renderer:
       | gdjs.CustomRuntimeObject2DRenderer
       | gdjs.CustomRuntimeObject3DRenderer;
@@ -61,8 +63,10 @@ namespace gdjs {
     private _flippedY: boolean = false;
     private opacity: float = 255;
     private _customCenter: FloatPoint | null = null;
-    private _localTransformation: gdjs.AffineTransformation = new gdjs.AffineTransformation();
-    private _localInverseTransformation: gdjs.AffineTransformation = new gdjs.AffineTransformation();
+    private _localTransformation: gdjs.AffineTransformation =
+      new gdjs.AffineTransformation();
+    private _localInverseTransformation: gdjs.AffineTransformation =
+      new gdjs.AffineTransformation();
     private _isLocalTransformationDirty: boolean = true;
     _type: string;
 
@@ -89,34 +93,57 @@ namespace gdjs {
     }
 
     private _initializeFromObjectData(
-      objectData: ObjectData & CustomObjectConfiguration
+      customObjectData: ObjectData & CustomObjectConfiguration
     ) {
       const eventsBasedObjectData = this._runtimeScene
         .getGame()
-        .getEventsBasedObjectData(objectData.type);
+        .getEventsBasedObjectData(customObjectData.type);
       if (!eventsBasedObjectData) {
         logger.error(
-          `A CustomRuntimeObject was initialized (or re-initialized) from object data referring to an non existing events based object data with type "${objectData.type}".`
+          `A CustomRuntimeObject was initialized (or re-initialized) from object data referring to an non existing events based object data with type "${customObjectData.type}".`
         );
         return;
       }
+
+      if (!eventsBasedObjectData.defaultVariant) {
+        eventsBasedObjectData.defaultVariant = {
+          ...eventsBasedObjectData,
+          name: '',
+        };
+      }
+      let usedVariantData: EventsBasedObjectVariantData =
+        eventsBasedObjectData.defaultVariant;
+      if (customObjectData.variant) {
+        for (
+          let variantIndex = 0;
+          variantIndex < eventsBasedObjectData.variants.length;
+          variantIndex++
+        ) {
+          const variantData = eventsBasedObjectData.variants[variantIndex];
+          if (variantData.name === customObjectData.variant) {
+            usedVariantData = variantData;
+            break;
+          }
+        }
+      }
+
       this._isInnerAreaFollowingParentSize =
         eventsBasedObjectData.isInnerAreaFollowingParentSize;
-      if (eventsBasedObjectData.instances.length > 0) {
+      if (usedVariantData.instances.length > 0) {
         if (!this._innerArea) {
           this._innerArea = {
             min: [0, 0, 0],
             max: [0, 0, 0],
           };
         }
-        this._innerArea.min[0] = eventsBasedObjectData.areaMinX;
-        this._innerArea.min[1] = eventsBasedObjectData.areaMinY;
-        this._innerArea.min[2] = eventsBasedObjectData.areaMinZ;
-        this._innerArea.max[0] = eventsBasedObjectData.areaMaxX;
-        this._innerArea.max[1] = eventsBasedObjectData.areaMaxY;
-        this._innerArea.max[2] = eventsBasedObjectData.areaMaxZ;
+        this._innerArea.min[0] = usedVariantData.areaMinX;
+        this._innerArea.min[1] = usedVariantData.areaMinY;
+        this._innerArea.min[2] = usedVariantData.areaMinZ;
+        this._innerArea.max[0] = usedVariantData.areaMaxX;
+        this._innerArea.max[1] = usedVariantData.areaMaxY;
+        this._innerArea.max[2] = usedVariantData.areaMaxZ;
       }
-      this._instanceContainer.loadFrom(objectData, eventsBasedObjectData);
+      this._instanceContainer.loadFrom(customObjectData, usedVariantData);
     }
 
     protected abstract _createRender():
@@ -124,7 +151,7 @@ namespace gdjs {
       | gdjs.CustomRuntimeObject3DRenderer;
     protected abstract _reinitializeRenderer(): void;
 
-    reinitialize(objectData: ObjectData & CustomObjectConfiguration) {
+    override reinitialize(objectData: ObjectData & CustomObjectConfiguration) {
       super.reinitialize(objectData);
 
       this._initializeFromObjectData(objectData);
@@ -134,7 +161,7 @@ namespace gdjs {
       this.onCreated();
     }
 
-    updateFromObjectData(
+    override updateFromObjectData(
       oldObjectData: ObjectData & CustomObjectConfiguration,
       newObjectData: ObjectData & CustomObjectConfiguration
     ): boolean {
@@ -148,7 +175,9 @@ namespace gdjs {
       return true;
     }
 
-    extraInitializationFromInitialInstance(initialInstanceData: InstanceData) {
+    override extraInitializationFromInitialInstance(
+      initialInstanceData: InstanceData
+    ) {
       const animator = this.getAnimator();
       if (initialInstanceData.numberProperties) {
         for (
@@ -177,16 +206,16 @@ namespace gdjs {
       }
     }
 
-    onDeletedFromScene(parent: gdjs.RuntimeInstanceContainer): void {
+    override onDeletedFromScene(): void {
       // Let subclasses do something before the object is destroyed.
-      this.onDestroy(parent);
+      this.onDestroy(this._runtimeScene);
       // Let behaviors do something before the object is destroyed.
-      super.onDeletedFromScene(parent);
+      super.onDeletedFromScene();
       // Destroy the children.
-      this._instanceContainer.onDestroyFromScene(parent);
+      this._instanceContainer.onDestroyFromScene(this._runtimeScene);
     }
 
-    update(parent: gdjs.RuntimeInstanceContainer): void {
+    override update(parent: gdjs.RuntimeInstanceContainer): void {
       this._instanceContainer._updateObjectsPreEvents();
 
       this.doStepPreEvents(this._instanceContainer);
@@ -224,7 +253,7 @@ namespace gdjs {
      */
     onDestroy(parent: gdjs.RuntimeInstanceContainer) {}
 
-    updatePreRender(parent: gdjs.RuntimeInstanceContainer): void {
+    override updatePreRender(parent: gdjs.RuntimeInstanceContainer): void {
       this._instanceContainer._updateObjectsPreRender();
       this.getRenderer().ensureUpToDate();
     }
@@ -245,7 +274,7 @@ namespace gdjs {
       this.getRenderer().update();
     }
 
-    updateHitBoxes(): void {
+    override updateHitBoxes(): void {
       if (this._isUntransformedHitBoxesDirty) {
         this._updateUntransformedHitBoxes();
       }
@@ -270,9 +299,8 @@ namespace gdjs {
             this.hitBoxes[i].vertices[j]
           );
         }
-        this.hitBoxes[i].vertices.length = this._untransformedHitBoxes[
-          i
-        ].vertices.length;
+        this.hitBoxes[i].vertices.length =
+          this._untransformedHitBoxes[i].vertices.length;
       }
     }
 
@@ -329,7 +357,7 @@ namespace gdjs {
      *
      * @param x The X position of the point, in object coordinates.
      * @param y The Y position of the point, in object coordinates.
-     * @param result Array that will be updated with the result
+     * @param destination Array that will be updated with the result
      * (x and y position of the point in parent coordinates).
      */
     applyObjectTransformation(x: float, y: float, destination: FloatPoint) {
@@ -388,7 +416,7 @@ namespace gdjs {
      *
      * @param x The X position of the point, in parent coordinates.
      * @param y The Y position of the point, in parent coordinates.
-     * @param result Array that will be updated with the result
+     * @param destination Array that will be updated with the result
      * (x and y position of the point in object coordinates).
      */
     applyObjectInverseTransformation(
@@ -402,7 +430,7 @@ namespace gdjs {
       this.getLocalInverseTransformation().transform(source, destination);
     }
 
-    getDrawableX(): float {
+    override getDrawableX(): float {
       let minX = 0;
       if (this._innerArea) {
         minX = this._innerArea.min[0];
@@ -424,7 +452,7 @@ namespace gdjs {
       }
     }
 
-    getDrawableY(): float {
+    override getDrawableY(): float {
       let minY = 0;
       if (this._innerArea) {
         minY = this._innerArea.min[1];
@@ -582,29 +610,29 @@ namespace gdjs {
       return !!this._customCenter;
     }
 
-    getCenterX(): float {
+    override getCenterX(): float {
       return (
         (this.getUnscaledCenterX() - this._unrotatedAABB.min[0]) *
         this.getScaleX()
       );
     }
 
-    getCenterY(): float {
+    override getCenterY(): float {
       return (
         (this.getUnscaledCenterY() - this._unrotatedAABB.min[1]) *
         this.getScaleY()
       );
     }
 
-    getWidth(): float {
+    override getWidth(): float {
       return this.getUnscaledWidth() * this.getScaleX();
     }
 
-    getHeight(): float {
+    override getHeight(): float {
       return this.getUnscaledHeight() * this.getScaleY();
     }
 
-    setWidth(newWidth: float): void {
+    override setWidth(newWidth: float): void {
       const unscaledWidth = this.getUnscaledWidth();
       if (unscaledWidth === 0) {
         return;
@@ -618,7 +646,7 @@ namespace gdjs {
       }
     }
 
-    setHeight(newHeight: float): void {
+    override setHeight(newHeight: float): void {
       const unscaledHeight = this.getUnscaledHeight();
       if (unscaledHeight === 0) {
         return;
@@ -643,7 +671,7 @@ namespace gdjs {
       this.setHeight(newHeight);
     }
 
-    setX(x: float): void {
+    override setX(x: float): void {
       if (x === this.x) {
         return;
       }
@@ -653,7 +681,7 @@ namespace gdjs {
       this.getRenderer().updateX();
     }
 
-    setY(y: float): void {
+    override setY(y: float): void {
       if (y === this.y) {
         return;
       }
@@ -663,7 +691,7 @@ namespace gdjs {
       this.getRenderer().updateY();
     }
 
-    setAngle(angle: float): void {
+    override setAngle(angle: float): void {
       if (this.angle === angle) {
         return;
       }
@@ -798,11 +826,7 @@ namespace gdjs {
       return this.opacity;
     }
 
-    /**
-     * Hide (or show) the object
-     * @param enable true to hide the object, false to show it again.
-     */
-    hide(enable: boolean): void {
+    override hide(enable: boolean): void {
       if (enable === undefined) {
         enable = true;
       }

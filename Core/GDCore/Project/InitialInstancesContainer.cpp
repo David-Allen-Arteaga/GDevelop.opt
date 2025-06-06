@@ -41,6 +41,16 @@ void InitialInstancesContainer::IterateOverInstances(
   for (auto& instance : initialInstances) func(instance);
 }
 
+void InitialInstancesContainer::IterateOverInstances(
+  const std::function< bool(gd::InitialInstance &) >& func) {
+  for (auto& instance : initialInstances) {
+    bool shouldStop = func(instance);
+    if (shouldStop) {
+      return;
+    }
+  }
+}
+
 void InitialInstancesContainer::IterateOverInstancesWithZOrdering(
     gd::InitialInstanceFunctor& func, const gd::String& layerName) {
   std::vector<std::reference_wrapper<gd::InitialInstance>> sortedInstances;

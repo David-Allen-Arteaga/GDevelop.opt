@@ -7,6 +7,7 @@ type ToolbarProps = {|
   height?: number,
   borderBottomColor?: ?string,
   paddingBottom?: number,
+  hidden?: boolean,
 |};
 
 const styles = {
@@ -17,6 +18,7 @@ const styles = {
     overflowY: 'hidden',
     paddingLeft: 8,
     paddingRight: 8,
+    position: 'relative', // to ensure it is displayed above any global iframe.
   },
 };
 
@@ -26,6 +28,7 @@ export const Toolbar = React.memo<ToolbarProps>(
     borderBottomColor,
     height = 40,
     paddingBottom,
+    hidden,
   }: ToolbarProps) => {
     const gdevelopTheme = React.useContext(GDevelopThemeContext);
     return (
@@ -39,6 +42,12 @@ export const Toolbar = React.memo<ToolbarProps>(
             ? `2px solid ${borderBottomColor}`
             : undefined,
           ...(paddingBottom ? { paddingBottom } : undefined),
+
+          // Hiding the titlebar should still keep its position in the layout to avoid layout shifts:
+          visibility: hidden ? 'hidden' : 'visible',
+          // Use content-visibility as we know the exact height of the toolbar, so the
+          // content can be entirely skipped when hidden:
+          contentVisibility: hidden ? 'hidden' : 'visible',
         }}
       >
         {children}
@@ -51,7 +60,9 @@ const toolbarGroupStyle = props => ({
   flex: 1,
   display: 'flex',
   alignItems: 'center',
-  justifyContent: props.firstChild
+  justifyContent: props.spaceOut
+    ? 'space-around'
+    : props.firstChild
     ? 'flex-start'
     : props.lastChild
     ? 'flex-end'
@@ -62,6 +73,7 @@ type ToolbarGroupProps = {|
   children?: React.Node,
   firstChild?: boolean,
   lastChild?: boolean,
+  spaceOut?: boolean,
 |};
 
 export const ToolbarGroup = React.memo<ToolbarGroupProps>(

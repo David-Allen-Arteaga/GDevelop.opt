@@ -8,7 +8,8 @@ import {
   type Course,
 } from '../../../../Utils/GDevelopServices/Asset';
 import SectionContainer from '../SectionContainer';
-import CourseChapterView from '../../../../Course/CourseChapterView';
+import VideoBasedCourseChapterView from '../../../../Course/VideoBasedCourseChapterView';
+import TextBasedCourseChapterView from '../../../../Course/TextBasedCourseChapterView';
 import Paper from '../../../../UI/Paper';
 import Text from '../../../../UI/Text';
 import { textEllipsisStyle } from '../../../../UI/TextEllipsis';
@@ -36,7 +37,11 @@ import { selectMessageByLocale } from '../../../../Utils/i18n/MessageByLocale';
 
 const styles = {
   desktopContainer: { display: 'flex', gap: 16 },
-  sideContainer: { maxWidth: 250, position: 'relative' },
+  sideContainer: {
+    width: 250,
+    flexShrink: 0,
+    position: 'relative',
+  },
   sideContent: {
     position: 'sticky',
     top: 20,
@@ -83,7 +88,10 @@ const alertMessageKey = 'course-subtitles-in-user-language';
 type Props = {|
   course: Course,
   courseChapters: CourseChapter[],
-  onOpenTemplateFromCourseChapter: CourseChapter => Promise<void>,
+  onOpenTemplateFromCourseChapter: (
+    CourseChapter,
+    templateId?: string
+  ) => Promise<void>,
   onBack: () => void,
   onCompleteTask: (
     chapterId: string,
@@ -115,7 +123,7 @@ const CourseSection = ({
     false
   );
   const firstIncompleteChapterIdRef = React.useRef<string | null>(
-    courseChapters.reduce((alreadyFoundIncompleteChapterId, chapter) => {
+    courseChapters.reduce((alreadyFoundIncompleteChapterId, chapter, index) => {
       if (alreadyFoundIncompleteChapterId)
         return alreadyFoundIncompleteChapterId;
       const chapterCompletion = getChapterCompletion(chapter.id);
@@ -124,6 +132,12 @@ const CourseSection = ({
         !chapterCompletion ||
         chapterCompletion.completedTasks < chapterCompletion.tasks
       ) {
+        if (index === 0) {
+          // If first chapter is not complete, either the user never started the course
+          // or they didn't complete it. Either way, do not scroll so that they
+          // can still see the course's title and introduction.
+          return 'BEGINNER';
+        }
         return chapter.id;
       }
       return null;
@@ -138,9 +152,9 @@ const CourseSection = ({
   >(new Array(courseChapters.length));
   const [activeChapterId, setActiveChapterId] = React.useState<?string>(null);
 
-  const subtitleHint = allAlertMessages.find(
-    message => message.key === alertMessageKey
-  );
+  const subtitleHint = courseChapters.some(chapter => 'videoUrl' in chapter) // Display hint only if there are some video-based chapters.
+    ? allAlertMessages.find(message => message.key === alertMessageKey)
+    : null;
 
   const tableOfContent = courseChapters.map((chapter, chapterIndex) => {
     const chapterCompletion = getChapterCompletion(chapter.id);
@@ -167,7 +181,7 @@ const CourseSection = ({
             style={textEllipsisStyle}
             color={chapter.isLocked ? 'secondary' : 'primary'}
           >
-            {chapter.title}
+            {chapter.shortTitle || chapter.title}
           </Text>
         </Line>
         {chapter.isLocked ? (
@@ -254,6 +268,7 @@ const CourseSection = ({
   React.useEffect(
     () => {
       if (firstIncompleteChapterIdRef.current) {
+        if (firstIncompleteChapterIdRef.current === 'BEGINNER') return;
         scrollToChapter(firstIncompleteChapterIdRef.current);
       }
     },
@@ -291,28 +306,52 @@ const CourseSection = ({
                     </AlertMessage>
                   </Line>
                 )}
-                {courseChapters.map((chapter, index) => (
-                  <CourseChapterView
-                    chapterIndex={index}
-                    courseChapter={chapter}
-                    onOpenTemplate={() => {
-                      onOpenTemplateFromCourseChapter(chapter);
-                    }}
-                    onCompleteTask={onCompleteTask}
-                    isTaskCompleted={isTaskCompleted}
-                    getChapterCompletion={getChapterCompletion}
-                    key={chapter.id}
-                    onBuyWithCredits={onBuyCourseChapterWithCredits}
-                    ref={_ref => {
-                      if (_ref) {
-                        chapterTitleRefs.current[index] = {
-                          chapterId: chapter.id,
-                          ref: _ref,
-                        };
-                      }
-                    }}
-                  />
-                ))}
+                {courseChapters.map((chapter: CourseChapter, index) =>
+                  chapter.videoUrl ? (
+                    <VideoBasedCourseChapterView
+                      chapterIndex={index}
+                      courseChapter={chapter}
+                      onOpenTemplate={() => {
+                        onOpenTemplateFromCourseChapter(chapter);
+                      }}
+                      onCompleteTask={onCompleteTask}
+                      isTaskCompleted={isTaskCompleted}
+                      getChapterCompletion={getChapterCompletion}
+                      key={chapter.id}
+                      onBuyWithCredits={onBuyCourseChapterWithCredits}
+                      ref={_ref => {
+                        if (_ref) {
+                          chapterTitleRefs.current[index] = {
+                            chapterId: chapter.id,
+                            ref: _ref,
+                          };
+                        }
+                      }}
+                    />
+                  ) : (
+                    <TextBasedCourseChapterView
+                      chapterIndex={index}
+                      // $FlowIgnore - Flow does not conclude this chapter can only be text-based.
+                      courseChapter={chapter}
+                      onOpenTemplate={(templateId?: string) => {
+                        onOpenTemplateFromCourseChapter(chapter, templateId);
+                      }}
+                      onCompleteTask={onCompleteTask}
+                      isTaskCompleted={isTaskCompleted}
+                      getChapterCompletion={getChapterCompletion}
+                      key={chapter.id}
+                      onBuyWithCredits={onBuyCourseChapterWithCredits}
+                      ref={_ref => {
+                        if (_ref) {
+                          chapterTitleRefs.current[index] = {
+                            chapterId: chapter.id,
+                            ref: _ref,
+                          };
+                        }
+                      }}
+                    />
+                  )
+                )}
                 <div style={styles.footer} />
               </Column>
               {isMobile && !isLandscape ? null : (
@@ -323,7 +362,7 @@ const CourseSection = ({
                       style={styles.desktopTableOfContent}
                     >
                       <Text noMargin size="sub-title">
-                        Chapters
+                        <Trans>Chapters</Trans>
                       </Text>
                       {courseCompletion !== null && (
                         <Line noMargin>

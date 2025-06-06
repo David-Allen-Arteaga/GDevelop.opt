@@ -13,7 +13,7 @@ import InstancesSelection from '../InstancesEditor/InstancesSelection';
 import { type ObjectEditorTab } from '../ObjectEditor/ObjectEditorDialog';
 import { type HistoryHandler } from '../VariablesList/VariablesList';
 import { type InstancesEditorShortcutsCallbacks } from '../InstancesEditor';
-import { type EditorId } from '.';
+import { type EditorId } from './utils';
 import Rectangle from '../Utils/Rectangle';
 import ViewPosition from '../InstancesEditor/ViewPosition';
 import { type ObjectFolderOrObjectWithContext } from '../ObjectsList/EnumerateObjectFolderOrObject';
@@ -25,6 +25,7 @@ export type SceneEditorsDisplayProps = {|
   layout: gdLayout | null,
   eventsFunctionsExtension: gdEventsFunctionsExtension | null,
   eventsBasedObject: gdEventsBasedObject | null,
+  eventsBasedObjectVariant: gdEventsBasedObjectVariant | null,
   layersContainer: gdLayersContainer,
   globalObjectsContainer: gdObjectsContainer | null,
   objectsContainer: gdObjectsContainer,
@@ -45,6 +46,11 @@ export type SceneEditorsDisplayProps = {|
   onOpenEventBasedObjectEditor: (
     extensionName: string,
     eventsBasedObjectName: string
+  ) => void,
+  onOpenEventBasedObjectVariantEditor: (
+    extensionName: string,
+    eventsBasedObjectName: string,
+    variantName: string
   ) => void,
   selectedObjectFolderOrObjectsWithContext: ObjectFolderOrObjectWithContext[],
   onSelectLayer: (layerName: string) => void,
@@ -92,6 +98,7 @@ export type SceneEditorsDisplayProps = {|
     i18n: I18nType,
     objectOrGroupName: string
   ) => boolean,
+  onExtensionInstalled: (extensionName: string) => void,
 
   updateBehaviorsSharedData: () => void,
   onInstancesAdded: (Array<gdInitialInstance>) => void,
@@ -166,9 +173,9 @@ export type SceneEditorsDisplayInterface = {|
       position: [number, number],
       copyReferential: [number, number],
       serializedInstances: Array<Object>,
-      preventSnapToGrid?: boolean,
       addInstancesInTheForeground?: boolean,
       doesObjectExistInContext: string => boolean,
     |}) => Array<gdInitialInstance>,
+    snapSelection: (instances: gdInitialInstance[]) => void,
   |},
 |};

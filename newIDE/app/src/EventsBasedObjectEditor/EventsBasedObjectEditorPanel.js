@@ -17,10 +17,13 @@ type Props = {|
   eventsFunctionsExtension: gdEventsFunctionsExtension,
   eventsBasedObject: gdEventsBasedObject,
   onRenameProperty: (oldName: string, newName: string) => void,
+  onPropertyTypeChanged: (propertyName: string) => void,
   onEventsFunctionsAdded: () => void,
   onOpenCustomObjectEditor: () => void,
   unsavedChanges?: ?UnsavedChanges,
-  onEventsBasedObjectChildrenEdited: () => void,
+  onEventsBasedObjectChildrenEdited: (
+    eventsBasedObject: gdEventsBasedObject
+  ) => void,
 |};
 
 export default function EventsBasedObjectEditorPanel({
@@ -29,6 +32,7 @@ export default function EventsBasedObjectEditorPanel({
   eventsFunctionsExtension,
   eventsBasedObject,
   onRenameProperty,
+  onPropertyTypeChanged,
   onEventsFunctionsAdded,
   onOpenCustomObjectEditor,
   unsavedChanges,
@@ -84,6 +88,7 @@ export default function EventsBasedObjectEditorPanel({
             eventsBasedObject={eventsBasedObject}
             onRenameProperty={onRenameProperty}
             onPropertiesUpdated={onPropertiesUpdated}
+            onPropertyTypeChanged={onPropertyTypeChanged}
             onEventsFunctionsAdded={onEventsFunctionsAdded}
           />
         )}

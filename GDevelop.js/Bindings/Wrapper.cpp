@@ -44,8 +44,10 @@
 #include <GDCore/IDE/Events/InstructionsTypeRenamer.h>
 #include <GDCore/IDE/Events/TextFormatting.h>
 #include <GDCore/IDE/Events/UsedExtensionsFinder.h>
+#include <GDCore/IDE/Events/ExampleExtensionUsagesFinder.h>
 #include <GDCore/IDE/EventsFunctionTools.h>
-#include <GDCore/IDE/GroupVariableHelper.h>
+#include <GDCore/IDE/ObjectVariableHelper.h>
+#include <GDCore/IDE/EventsBasedObjectVariantHelper.h>
 #include <GDCore/IDE/Project/ArbitraryResourceWorker.h>
 #include <GDCore/IDE/Project/ArbitraryObjectsWorker.h>
 #include <GDCore/IDE/Project/ObjectsUsingResourceCollector.h>
@@ -77,6 +79,7 @@
 #include <GDCore/Project/MeasurementUnitElement.h>
 #include <GDCore/Project/NamedPropertyDescriptor.h>
 #include <GDCore/Project/Object.h>
+#include <GDCore/Project/ObjectTools.h>
 #include <GDCore/Project/ObjectFolderOrObject.h>
 #include <GDCore/Project/ObjectConfiguration.h>
 #include <GDCore/Project/Project.h>
@@ -599,7 +602,9 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_GetExtensionAndBehaviorStrExpressionMetadata \
   GetExtensionAndBehaviorStrExpressionMetadata
 #define STATIC_IsBadExpressionMetadata IsBadExpressionMetadata
+#define STATIC_IsBadInstructionMetadata IsBadInstructionMetadata
 #define STATIC_IsBadBehaviorMetadata IsBadBehaviorMetadata
+#define STATIC_IsBadObjectMetadata IsBadObjectMetadata
 
 #define STATIC_RenameObjectInEvents RenameObjectInEvents
 #define STATIC_RemoveObjectInEvents RemoveObjectInEvents
@@ -658,6 +663,7 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_FindInvalidRequiredBehaviorProperties \
   FindInvalidRequiredBehaviorProperties
 #define STATIC_GetBehaviorsWithType GetBehaviorsWithType
+#define STATIC_IsBehaviorCompatibleWithObject IsBehaviorCompatibleWithObject
 #define STATIC_FixInvalidRequiredBehaviorProperties \
   FixInvalidRequiredBehaviorProperties
 #define STATIC_RemoveLayerInScene RemoveLayerInScene
@@ -714,12 +720,16 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_GetObjectNameFromFullObjectType GetObjectNameFromFullObjectType
 #define STATIC_ApplyRefactoringForVariablesContainer \
   ApplyRefactoringForVariablesContainer
+  #define STATIC_ApplyRefactoringForObjectVariablesContainer \
+  ApplyRefactoringForObjectVariablesContainer
 #define STATIC_ApplyRefactoringForGroupVariablesContainer \
   ApplyRefactoringForGroupVariablesContainer
 #define STATIC_ComputeChangesetForVariablesContainer \
   ComputeChangesetForVariablesContainer
 #define STATIC_MergeVariableContainers MergeVariableContainers
 #define STATIC_FillAnyVariableBetweenObjects FillAnyVariableBetweenObjects
+#define STATIC_ApplyChangesToVariants ApplyChangesToVariants
+#define STATIC_ComplyVariantsToEventsBasedObject ComplyVariantsToEventsBasedObject
 #define STATIC_RenameEventsFunctionsExtension RenameEventsFunctionsExtension
 #define STATIC_UpdateExtensionNameInEventsBasedBehavior \
   UpdateExtensionNameInEventsBasedBehavior
@@ -729,6 +739,7 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_RenameBehaviorEventsFunction RenameBehaviorEventsFunction
 #define STATIC_RenameObjectEventsFunction RenameObjectEventsFunction
 #define STATIC_RenameParameter RenameParameter
+#define STATIC_ChangeParameterType ChangeParameterType
 #define STATIC_MoveEventsFunctionParameter MoveEventsFunctionParameter
 #define STATIC_MoveBehaviorEventsFunctionParameter \
   MoveBehaviorEventsFunctionParameter
@@ -739,6 +750,8 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_RenameEventsBasedBehaviorSharedProperty \
   RenameEventsBasedBehaviorSharedProperty
 #define STATIC_RenameEventsBasedObjectProperty RenameEventsBasedObjectProperty
+#define STATIC_ChangeEventsBasedBehaviorPropertyType ChangeEventsBasedBehaviorPropertyType
+#define STATIC_ChangeEventsBasedObjectPropertyType ChangeEventsBasedObjectPropertyType
 #define STATIC_RenameEventsBasedBehavior RenameEventsBasedBehavior
 #define STATIC_UpdateBehaviorNameInEventsBasedBehavior UpdateBehaviorNameInEventsBasedBehavior
 #define STATIC_RenameEventsBasedObject RenameEventsBasedObject
@@ -807,6 +820,7 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_GetNodeAtPosition GetNodeAtPosition
 
 #define STATIC_ScanProject ScanProject
+#define STATIC_GetUsedExtensions GetUsedExtensions
 
 #define STATIC_ApplyTranslation ApplyTranslation
 #define STATIC_GetUndefined GetUndefined
@@ -816,6 +830,7 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define STATIC_GetPixel GetPixel
 #define STATIC_GetPixelSpeed GetPixelSpeed
 #define STATIC_GetPixelAcceleration GetPixelAcceleration
+#define STATIC_GetAngularSpeed GetAngularSpeed
 #define STATIC_GetNewton GetNewton
 #define STATIC_GetDefaultMeasurementUnitsCount GetDefaultMeasurementUnitsCount
 #define STATIC_GetDefaultMeasurementUnitAtIndex GetDefaultMeasurementUnitAtIndex
@@ -835,6 +850,7 @@ typedef ExtensionAndMetadata<ExpressionMetadata> ExtensionAndExpressionMetadata;
 #define RemoveEventAt RemoveEvent
 #define RemoveAt Remove
 #define GetEventsFunctionAt GetEventsFunction
+#define GetVariantAt GetVariant
 #define GetEffectAt GetEffect
 #define GetParameterAt GetParameter
 

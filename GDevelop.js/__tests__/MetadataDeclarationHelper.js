@@ -14,7 +14,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'MyFunction',
       0
     );
@@ -50,7 +51,8 @@ describe('MetadataDeclarationHelper', () => {
       'My🧩Extension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'My_📝Function',
       0
     );
@@ -83,7 +85,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'MyFunction',
       0
     );
@@ -119,7 +122,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'MyFunction',
       0
     );
@@ -153,7 +157,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction('Value', 0);
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction('Value', 0);
     eventFunction.setFunctionType(gd.EventsFunction.ExpressionAndCondition);
     eventFunction.setFullName('Some value');
     eventFunction.setDescription('some value.');
@@ -192,14 +197,15 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
 
-    const getter = eventExtension.insertNewEventsFunction('Value', 0);
+    const getter = freeEventsFunctions.insertNewEventsFunction('Value', 0);
     getter.setFunctionType(gd.EventsFunction.ExpressionAndConditions);
     getter.setFullName('Some value');
     getter.setDescription('some value.');
     getter.setSentence('some value');
 
-    const eventFunction = eventExtension.insertNewEventsFunction('SetValue', 0);
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction('SetValue', 0);
     eventFunction.setFunctionType(gd.EventsFunction.ActionWithOperator);
     eventFunction.setGetterName('Value');
 
@@ -573,7 +579,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Change the property value for Value of _PARAM0_: _PARAM2_ _PARAM3_'
     );
-    expect(action.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(action.isHidden()).toBe(true);
     expect(action.isPrivate()).toBe(true);
 
     expect(action.getParametersCount()).toBe(4);
@@ -597,7 +604,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'The property value for Value of _PARAM0_ _PARAM2_ _PARAM3_'
     );
-    expect(condition.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(condition.isHidden()).toBe(true);
     expect(condition.isPrivate()).toBe(true);
 
     expect(condition.getParametersCount()).toBe(4);
@@ -751,7 +759,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Set property value for Value of _PARAM0_ to _PARAM2_'
     );
-    expect(action.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(action.isHidden()).toBe(true);
     expect(action.isPrivate()).toBe(true);
 
     expect(action.getParametersCount()).toBe(3);
@@ -773,7 +782,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'Property Value of _PARAM0_ is true'
     );
-    expect(condition.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(condition.isHidden()).toBe(true);
     expect(condition.isPrivate()).toBe(true);
 
     expect(condition.getParametersCount()).toBe(2);
@@ -828,6 +838,7 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Change the property value for Value of _PARAM0_: _PARAM2_ _PARAM3_'
     );
+    // Shared properties can't be used in variable instructions yet.
     expect(action.isHidden()).toBe(false);
     expect(action.isPrivate()).toBe(true);
 
@@ -852,6 +863,7 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'The property value for Value of _PARAM0_ _PARAM2_ _PARAM3_'
     );
+    // Shared properties can't be used in variable instructions yet.
     expect(condition.isHidden()).toBe(false);
     expect(condition.isPrivate()).toBe(true);
 
@@ -927,6 +939,7 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Set property value for Value of _PARAM0_ to _PARAM2_'
     );
+    // Shared properties can't be used in variable instructions yet.
     expect(action.isHidden()).toBe(false);
     expect(action.isPrivate()).toBe(true);
 
@@ -949,6 +962,7 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'Property Value of _PARAM0_ is true'
     );
+    // Shared properties can't be used in variable instructions yet.
     expect(condition.isHidden()).toBe(false);
     expect(condition.isPrivate()).toBe(true);
 
@@ -1438,7 +1452,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Change the property value for Value of _PARAM0_: _PARAM1_ _PARAM2_'
     );
-    expect(action.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(action.isHidden()).toBe(true);
     expect(action.isPrivate()).toBe(true);
 
     expect(action.getParametersCount()).toBe(3);
@@ -1461,7 +1476,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'The property value for Value of _PARAM0_ _PARAM1_ _PARAM2_'
     );
-    expect(condition.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(condition.isHidden()).toBe(true);
     expect(condition.isPrivate()).toBe(true);
 
     expect(condition.getParametersCount()).toBe(3);
@@ -1532,7 +1548,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(action.getSentence()).toBe(
       'Set property value for Value of _PARAM0_ to _PARAM1_'
     );
-    expect(action.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(action.isHidden()).toBe(true);
     expect(action.isPrivate()).toBe(true);
 
     expect(action.getParametersCount()).toBe(2);
@@ -1553,7 +1570,8 @@ describe('MetadataDeclarationHelper', () => {
     expect(condition.getSentence()).toBe(
       'Property Value of _PARAM0_ is true'
     );
-    expect(condition.isHidden()).toBe(false);
+    // It is deprecated, variable instructions are used instead.
+    expect(condition.isHidden()).toBe(true);
     expect(condition.isPrivate()).toBe(true);
 
     expect(condition.getParametersCount()).toBe(1);
@@ -1682,7 +1700,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'MyFunction',
       0
     );
@@ -1723,7 +1742,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction(
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction(
       'MyFunction',
       0
     );
@@ -1764,7 +1784,8 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
-    const eventFunction = eventExtension.insertNewEventsFunction('Value', 0);
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction('Value', 0);
     eventFunction.setFunctionType(gd.EventsFunction.ExpressionAndCondition);
     eventFunction.setFullName('');
     eventFunction.setDescription('');
@@ -1807,8 +1828,9 @@ describe('MetadataDeclarationHelper', () => {
       'MyExtension',
       0
     );
+    const freeEventsFunctions = eventExtension.getEventsFunctions();
 
-    const getter = eventExtension.insertNewEventsFunction('Value', 0);
+    const getter = freeEventsFunctions.insertNewEventsFunction('Value', 0);
     getter.setFunctionType(gd.EventsFunction.ExpressionAndConditions);
     getter.setFullName('');
     getter.setDescription('');
@@ -1819,7 +1841,7 @@ describe('MetadataDeclarationHelper', () => {
       .addNewParameter('Parameter')
       .setType('number');
 
-    const eventFunction = eventExtension.insertNewEventsFunction('SetValue', 0);
+    const eventFunction = freeEventsFunctions.insertNewEventsFunction('SetValue', 0);
     eventFunction.setFunctionType(gd.EventsFunction.ActionWithOperator);
     eventFunction.setGetterName('Value');
 

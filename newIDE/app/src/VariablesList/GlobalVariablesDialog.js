@@ -12,13 +12,9 @@ type Props = {|
   onApply: (selectedVariableName: string | null) => void,
   onCancel: () => void,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps | null,
-  /**
-   * If set to true, a deleted variable won't trigger a confirmation asking if the
-   * project must be refactored to delete any reference to it.
-   */
-  preventRefactoringToDeleteInstructions?: boolean,
   initiallySelectedVariableName?: string,
   shouldCreateInitiallySelectedVariable?: boolean,
+  isListLocked: boolean,
 |};
 
 const GlobalVariablesDialog = ({
@@ -27,9 +23,9 @@ const GlobalVariablesDialog = ({
   onCancel,
   onApply,
   hotReloadPreviewButtonProps,
-  preventRefactoringToDeleteInstructions,
   initiallySelectedVariableName,
   shouldCreateInitiallySelectedVariable,
+  isListLocked,
 }: Props) => {
   const onComputeAllVariableNames = React.useCallback(
     () =>
@@ -81,10 +77,8 @@ const GlobalVariablesDialog = ({
       }
       helpPagePath={'/all-features/variables/global-variables'}
       hotReloadPreviewButtonProps={hotReloadPreviewButtonProps}
-      preventRefactoringToDeleteInstructions={
-        preventRefactoringToDeleteInstructions
-      }
       id="global-variables-dialog"
+      isListLocked={isListLocked}
     />
   );
 };

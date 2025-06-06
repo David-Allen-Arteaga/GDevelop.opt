@@ -5,6 +5,7 @@ import { type Schema, type Instance } from '.';
 import { type ResourceKind } from '../ResourcesList/ResourceSource';
 import { type Field } from '.';
 import MeasurementUnitDocumentation from '../PropertiesEditor/MeasurementUnitDocumentation';
+import { keyNames } from '../EventsSheet/ParameterFields/KeyboardKeyField';
 
 const gd: libGDevelop = global.gd;
 
@@ -218,10 +219,10 @@ const createField = (
       getDescription,
       hasImpactOnAllOtherFields: property.hasImpactOnOtherProperties(),
     };
-  } else if (valueType === 'textarea') {
+  } else if (valueType === 'multilinestring') {
     return {
       name,
-      valueType: 'textarea',
+      valueType: 'multilinestring',
       getValue: (instance: Instance): string => {
         return getProperties(instance)
           .get(name)
@@ -234,28 +235,50 @@ const createField = (
       getDescription,
       hasImpactOnAllOtherFields: property.hasImpactOnOtherProperties(),
     };
-  } else if (valueType === 'animationname') {
+  } else if (valueType === 'objectanimationname') {
     return {
       getChoices: () => {
         if (!object) {
           return [];
         }
-        const animationArray = mapFor(
+        const choices = mapFor(
           0,
           object.getConfiguration().getAnimationsCount(),
           i => {
             const animationName = object.getConfiguration().getAnimationName(i);
-            if (animationName === '') {
-              return null;
-            }
-            return {
-              value: animationName,
-              label: animationName,
-            };
+            return animationName === ''
+              ? null
+              : {
+                  value: animationName,
+                  label: animationName,
+                };
           }
         ).filter(Boolean);
-        animationArray.push({ value: '', label: '(no animation)' });
-        return animationArray;
+        choices.push({ value: '', label: '(no animation)' });
+        return choices;
+      },
+      name,
+      valueType: 'string',
+      getValue: (instance: Instance): string => {
+        return getProperties(instance)
+          .get(name)
+          .getValue();
+      },
+      setValue: (instance: Instance, newValue: string) => {
+        onUpdateProperty(instance, name, newValue);
+      },
+      getLabel,
+      getDescription,
+    };
+  } else if (valueType === 'keyboardkey') {
+    return {
+      getChoices: () => {
+        const choices = keyNames.map(keyName => ({
+          value: keyName,
+          label: keyName,
+        }));
+        choices.push({ value: '', label: '(no key)' });
+        return choices;
       },
       name,
       valueType: 'string',

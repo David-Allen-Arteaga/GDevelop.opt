@@ -15,6 +15,7 @@ import { type ExampleShortHeader } from '../../Utils/GDevelopServices/Example';
 import { type PrivateGameTemplateListingData } from '../../Utils/GDevelopServices/Shop';
 import { type CourseChapter } from '../../Utils/GDevelopServices/Asset';
 import { type GamesList } from '../../GameDashboard/UseGamesList';
+import { type GamesPlatformFrameTools } from './HomePage/PlaySection/UseGamesPlatformFrame';
 import { type ObjectWithContext } from '../../ObjectsList/EnumerateObjects';
 
 export type EditorContainerExtraProps = {|
@@ -34,6 +35,7 @@ export type RenderEditorContainerProps = {|
   fileMetadata: ?FileMetadata,
   storageProvider: StorageProvider,
   setToolbar: (?React.Node) => void,
+  hideTabsTitleBarAndEditorToolbar: (hidden: boolean) => void,
 
   // Some optional extra props to pass to the rendered editor
   extraEditorProps: ?EditorContainerExtraProps,
@@ -61,7 +63,8 @@ export type RenderEditorContainerProps = {|
   ) => void,
   onOpenCustomObjectEditor: (
     gdEventsFunctionsExtension,
-    gdEventsBasedObject
+    gdEventsBasedObject,
+    variantName: string
   ) => void,
   openObjectEvents: (extensionName: string, objectName: string) => void,
 
@@ -99,10 +102,14 @@ export type RenderEditorContainerProps = {|
   // Games
   gamesList: GamesList,
 
+  // Games Platform
+  gamesPlatformFrameTools: GamesPlatformFrameTools,
+
   // Other dialogs opening:
   onSelectExampleShortHeader: ExampleShortHeader => void,
   onSelectPrivateGameTemplateListingData: PrivateGameTemplateListingData => void,
   onOpenLanguageDialog: () => void,
+  onOpenVersionHistory: () => void,
   selectInAppTutorial: (tutorialId: string) => void,
   onOpenProfile: () => void,
   onOpenPreferences: () => void,
@@ -121,10 +128,14 @@ export type RenderEditorContainerProps = {|
   onCreateProjectFromExample: (
     exampleShortHeader: ExampleShortHeader,
     newProjectSetup: NewProjectSetup,
-    i18n: I18nType
+    i18n: I18nType,
+    isQuickCustomization?: boolean
   ) => Promise<void>,
   onOpenTemplateFromTutorial: (tutorialId: string) => Promise<void>,
-  onOpenTemplateFromCourseChapter: CourseChapter => Promise<void>,
+  onOpenTemplateFromCourseChapter: (
+    CourseChapter,
+    templateId?: string
+  ) => Promise<void>,
   onOpenPrivateGameTemplateListingData: PrivateGameTemplateListingData => void,
 
   // Project save
@@ -133,11 +144,14 @@ export type RenderEditorContainerProps = {|
 
   // Object editing
   openBehaviorEvents: (extensionName: string, behaviorName: string) => void,
-  onEventsBasedObjectChildrenEdited: () => void,
+  onEventsBasedObjectChildrenEdited: (
+    eventsBasedObject: gdEventsBasedObject
+  ) => void,
   onSceneObjectEdited: (
     scene: gdLayout,
     objectWithContext: ObjectWithContext
   ) => void,
+  onSceneObjectsDeleted: (scene: gdLayout) => void,
 
   onExtractAsExternalLayout: (name: string) => void,
   onExtractAsEventBasedObject: (
@@ -147,6 +161,17 @@ export type RenderEditorContainerProps = {|
   onOpenEventBasedObjectEditor: (
     extensionName: string,
     eventsBasedObjectName: string
+  ) => void,
+  onOpenEventBasedObjectVariantEditor: (
+    extensionName: string,
+    eventsBasedObjectName: string,
+    variantName: string
+  ) => void,
+  onExtensionInstalled: (extensionName: string) => void,
+  onDeleteEventsBasedObjectVariant: (
+    eventsFunctionsExtension: gdEventsFunctionsExtension,
+    eventBasedObject: gdEventsBasedObject,
+    variant: gdEventsBasedObjectVariant
   ) => void,
 |};
 

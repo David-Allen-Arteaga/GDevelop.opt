@@ -2,7 +2,10 @@
 import { t } from '@lingui/macro';
 import * as React from 'react';
 import SubscriptionDialog from './SubscriptionDialog';
-import { type SubscriptionDialogDisplayReason } from '../../Utils/Analytics/EventSender';
+import {
+  sendSubscriptionDialogShown,
+  type SubscriptionDialogDisplayReason,
+} from '../../Utils/Analytics/EventSender';
 import { isNativeMobileApp } from '../../Utils/Platform';
 import {
   hasMobileAppStoreSubscriptionPlan,
@@ -11,15 +14,20 @@ import {
 import AuthenticatedUserContext from '../AuthenticatedUserContext';
 import useAlertDialog from '../../UI/Alert/useAlertDialog';
 import useSubscriptionPlans, {
-  getAvailableSubscriptionPlansWithPrices,
+  filterAvailableSubscriptionPlansWithPrices,
 } from '../../Utils/UseSubscriptionPlans';
+import PromotionSubscriptionDialog from './PromotionSubscriptionDialog';
+import SubscriptionPendingDialog from './SubscriptionPendingDialog';
+import LoaderModal from '../../UI/LoaderModal';
+import { useLazyMemo } from '../../Utils/UseLazyMemo';
+
+export type SubscriptionType = 'individual' | 'team' | 'education';
 
 export type SubscriptionAnalyticsMetadata = {|
   reason: SubscriptionDialogDisplayReason,
+  recommendedPlanId?: string,
   preStep?: 'subscriptionChecker',
 |};
-
-export type SubscriptionType = 'individual' | 'team' | 'education';
 
 type SubscriptionSuggestionState = {|
   /**
@@ -46,19 +54,23 @@ export const SubscriptionSuggestionProvider = ({
   children,
   simulateMobileApp,
 }: SubscriptionSuggestionProviderProps) => {
-  const [analyticsMetadata, setAnalyticsMetadata] = React.useState<?{|
-    reason: SubscriptionDialogDisplayReason,
-    preStep?: 'subscriptionChecker',
-  |}>(null);
+  const [
+    analyticsMetadata,
+    setAnalyticsMetadata,
+  ] = React.useState<?SubscriptionAnalyticsMetadata>(null);
   const [filter, setFilter] = React.useState<
     'individual' | 'team' | 'education' | null
   >(null);
   const authenticatedUser = React.useContext(AuthenticatedUserContext);
   const { showAlert } = useAlertDialog();
-  const { subscriptionPlansWithPricingSystems } = useSubscriptionPlans({
+  const { getSubscriptionPlansWithPricingSystems } = useSubscriptionPlans({
     includeLegacy: true,
     authenticatedUser,
   });
+  const [
+    subscriptionPendingDialogOpen,
+    setSubscriptionPendingDialogOpen,
+  ] = React.useState(false);
 
   const closeSubscriptionDialog = () => setAnalyticsMetadata(null);
 
@@ -90,65 +102,113 @@ export const SubscriptionSuggestionProvider = ({
     openSubscriptionDialog,
   ]);
 
-  const availableSubscriptionPlansWithPrices = React.useMemo(
-    () =>
-      subscriptionPlansWithPricingSystems
-        ? getAvailableSubscriptionPlansWithPrices(
-            subscriptionPlansWithPricingSystems
-          )
-        : null,
-    [subscriptionPlansWithPricingSystems]
+  const getAvailableSubscriptionPlansWithPrices = useLazyMemo(
+    React.useCallback(
+      () => {
+        const subscriptionPlansWithPricingSystems = getSubscriptionPlansWithPricingSystems();
+
+        return subscriptionPlansWithPricingSystems
+          ? filterAvailableSubscriptionPlansWithPrices(
+              subscriptionPlansWithPricingSystems
+            )
+          : null;
+      },
+      [getSubscriptionPlansWithPricingSystems]
+    )
   );
 
-  const userLegacySubscriptionPlanWithPricingSystem = React.useMemo(
+  const getUserLegacySubscriptionPlanWithPricingSystem = useLazyMemo(
+    React.useCallback(
+      () => {
+        const subscriptionPlansWithPricingSystems = getSubscriptionPlansWithPricingSystems();
+        if (
+          !authenticatedUser.subscription ||
+          !authenticatedUser.subscription.planId ||
+          !authenticatedUser.subscription.pricingSystemId ||
+          !subscriptionPlansWithPricingSystems
+        ) {
+          return null;
+        }
+        const {
+          planId: userPlanId,
+          pricingSystemId: userPricingSystemId,
+        } = authenticatedUser.subscription;
+        const userPlanWithPricingSystems = subscriptionPlansWithPricingSystems.find(
+          planWithPricingSystems => planWithPricingSystems.id === userPlanId
+        );
+        if (
+          !userPlanWithPricingSystems ||
+          !userPlanWithPricingSystems.isLegacy
+        ) {
+          return null;
+        }
+        const userPricingSystem = userPlanWithPricingSystems.pricingSystems.find(
+          pricingSystem => pricingSystem.id === userPricingSystemId
+        );
+        if (!userPricingSystem) return null;
+        return {
+          ...userPlanWithPricingSystems,
+          pricingSystems: [userPricingSystem],
+        };
+      },
+      [getSubscriptionPlansWithPricingSystems, authenticatedUser.subscription]
+    )
+  );
+
+  // When the analyticsMetadata is set, a dialog is shown so we can send an event.
+  React.useEffect(
     () => {
-      if (
-        !authenticatedUser.subscription ||
-        !authenticatedUser.subscription.planId ||
-        !authenticatedUser.subscription.pricingSystemId ||
-        !subscriptionPlansWithPricingSystems
-      ) {
-        return null;
+      if (analyticsMetadata) {
+        sendSubscriptionDialogShown(analyticsMetadata);
       }
-      const {
-        planId: userPlanId,
-        pricingSystemId: userPricingSystemId,
-      } = authenticatedUser.subscription;
-      const userPlanWithPricingSystems = subscriptionPlansWithPricingSystems.find(
-        planWithPricingSystems => planWithPricingSystems.id === userPlanId
-      );
-      if (!userPlanWithPricingSystems || !userPlanWithPricingSystems.isLegacy) {
-        return null;
-      }
-      const userPricingSystem = userPlanWithPricingSystems.pricingSystems.find(
-        pricingSystem => pricingSystem.id === userPricingSystemId
-      );
-      if (!userPricingSystem) return null;
-      return {
-        ...userPlanWithPricingSystems,
-        pricingSystems: [userPricingSystem],
-      };
     },
-    [subscriptionPlansWithPricingSystems, authenticatedUser.subscription]
+    [analyticsMetadata]
   );
 
   return (
     <SubscriptionSuggestionContext.Provider value={value}>
       {children}
-      {analyticsMetadata && (
-        <SubscriptionDialog
-          open
-          subscriptionPlansWithPricingSystems={
-            availableSubscriptionPlansWithPrices
-          }
-          userLegacySubscriptionPlanWithPricingSystem={
-            userLegacySubscriptionPlanWithPricingSystem
-          }
-          onClose={closeSubscriptionDialog}
-          analyticsMetadata={analyticsMetadata}
-          filter={filter}
+      {subscriptionPendingDialogOpen && (
+        <SubscriptionPendingDialog
+          authenticatedUser={authenticatedUser}
+          onClose={() => {
+            setSubscriptionPendingDialogOpen(false);
+            authenticatedUser.onRefreshSubscription();
+          }}
+          onSuccess={closeSubscriptionDialog}
         />
       )}
+      {analyticsMetadata ? (
+        authenticatedUser.loginState === 'loggingIn' ? (
+          <LoaderModal show />
+        ) : !hasValidSubscriptionPlan(authenticatedUser.subscription) &&
+          analyticsMetadata.recommendedPlanId ? (
+          <PromotionSubscriptionDialog
+            getAvailableSubscriptionPlansWithPrices={
+              getAvailableSubscriptionPlansWithPrices
+            }
+            onClose={closeSubscriptionDialog}
+            recommendedPlanId={analyticsMetadata.recommendedPlanId}
+            onOpenPendingDialog={(open: boolean) =>
+              setSubscriptionPendingDialogOpen(open)
+            }
+          />
+        ) : (
+          <SubscriptionDialog
+            getAvailableSubscriptionPlansWithPrices={
+              getAvailableSubscriptionPlansWithPrices
+            }
+            getUserLegacySubscriptionPlanWithPricingSystem={
+              getUserLegacySubscriptionPlanWithPricingSystem
+            }
+            onClose={closeSubscriptionDialog}
+            filter={filter}
+            onOpenPendingDialog={(open: boolean) =>
+              setSubscriptionPendingDialogOpen(open)
+            }
+          />
+        )
+      ) : null}
     </SubscriptionSuggestionContext.Provider>
   );
 };

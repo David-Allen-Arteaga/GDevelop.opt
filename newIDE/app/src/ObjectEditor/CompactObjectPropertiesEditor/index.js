@@ -27,8 +27,11 @@ import { ColumnStackLayout, LineStackLayout } from '../../UI/Layout';
 import { IconContainer } from '../../UI/IconContainer';
 import Remove from '../../UI/CustomSvgIcons/Remove';
 import useForceUpdate, { useForceRecompute } from '../../Utils/UseForceUpdate';
+import ChevronArrowTop from '../../UI/CustomSvgIcons/ChevronArrowTop';
 import ChevronArrowRight from '../../UI/CustomSvgIcons/ChevronArrowRight';
 import ChevronArrowBottom from '../../UI/CustomSvgIcons/ChevronArrowBottom';
+import ChevronArrowDownWithRoundedBorder from '../../UI/CustomSvgIcons/ChevronArrowDownWithRoundedBorder';
+import ChevronArrowRightWithRoundedBorder from '../../UI/CustomSvgIcons/ChevronArrowRightWithRoundedBorder';
 import Add from '../../UI/CustomSvgIcons/Add';
 import { useManageObjectBehaviors } from '../../BehaviorsEditor';
 import Object3d from '../../UI/CustomSvgIcons/Object3d';
@@ -44,13 +47,10 @@ import SelectOption from '../../UI/SelectOption';
 import { ChildObjectPropertiesEditor } from './ChildObjectPropertiesEditor';
 import { getSchemaWithOpenFullEditorButton } from './CompactObjectPropertiesSchema';
 import FlatButton from '../../UI/FlatButton';
-import ChevronArrowTop from '../../UI/CustomSvgIcons/ChevronArrowTop';
 import Help from '../../UI/CustomSvgIcons/Help';
 import { getHelpLink } from '../../Utils/HelpLink';
 import Window from '../../Utils/Window';
 import CompactTextField from '../../UI/CompactTextField';
-import SquaredDoubleChevronArrowDown from '../../UI/CustomSvgIcons/SquaredDoubleChevronArrowDown';
-import SquaredDoubleChevronArrowUp from '../../UI/CustomSvgIcons/SquaredDoubleChevronArrowUp';
 import { textEllipsisStyle } from '../../UI/TextEllipsis';
 import Link from '../../UI/Link';
 
@@ -157,7 +157,7 @@ const TopLevelCollapsibleSection = ({
   renderContentAsHiddenWhenFolded?: boolean,
   noContentMargin?: boolean,
   onOpenFullEditor: () => void,
-  onAdd?: () => void,
+  onAdd?: (() => void) | null,
 |}) => (
   <>
     <Separator />
@@ -166,9 +166,9 @@ const TopLevelCollapsibleSection = ({
         <LineStackLayout noMargin alignItems="center">
           <IconButton size="small" onClick={toggleFolded}>
             {isFolded ? (
-              <SquaredDoubleChevronArrowUp style={styles.icon} />
+              <ChevronArrowRightWithRoundedBorder style={styles.icon} />
             ) : (
-              <SquaredDoubleChevronArrowDown style={styles.icon} />
+              <ChevronArrowDownWithRoundedBorder style={styles.icon} />
             )}
           </IconButton>
           <Text size="sub-title" noMargin style={textEllipsisStyle}>
@@ -215,6 +215,9 @@ type Props = {|
 
   objects: Array<gdObject>,
   onEditObject: (object: gdObject, initialTab: ?ObjectEditorTab) => void,
+  onExtensionInstalled: (extensionName: string) => void,
+  isVariableListLocked: boolean,
+  isBehaviorListLocked: boolean,
 |};
 
 export const CompactObjectPropertiesEditor = ({
@@ -232,6 +235,9 @@ export const CompactObjectPropertiesEditor = ({
   historyHandler,
   objects,
   onEditObject,
+  onExtensionInstalled,
+  isVariableListLocked,
+  isBehaviorListLocked,
 }: Props) => {
   const forceUpdate = useForceUpdate();
   const [
@@ -335,6 +341,7 @@ export const CompactObjectPropertiesEditor = ({
     onUpdate: forceUpdate,
     onBehaviorsUpdated: forceUpdate,
     onUpdateBehaviorsSharedData,
+    onExtensionInstalled,
   });
 
   const allVisibleBehaviors = object
@@ -456,7 +463,7 @@ export const CompactObjectPropertiesEditor = ({
                   <FlatButton
                     fullWidth
                     primary
-                    leftIcon={<ChevronArrowRight />}
+                    leftIcon={<ChevronArrowRight style={styles.icon} />}
                     label={<Trans>Show more</Trans>}
                     onClick={() => {
                       setShowObjectAdvancedOptions(true);
@@ -482,7 +489,7 @@ export const CompactObjectPropertiesEditor = ({
                   <FlatButton
                     fullWidth
                     primary
-                    leftIcon={<ChevronArrowTop />}
+                    leftIcon={<ChevronArrowTop style={styles.icon} />}
                     label={<Trans>Show less</Trans>}
                     onClick={() => {
                       setShowObjectAdvancedOptions(false);
@@ -542,7 +549,7 @@ export const CompactObjectPropertiesEditor = ({
             isFolded={isBehaviorsFolded}
             toggleFolded={() => setIsBehaviorsFolded(!isBehaviorsFolded)}
             onOpenFullEditor={() => onEditObject(object, 'behaviors')}
-            onAdd={openNewBehaviorDialog}
+            onAdd={isBehaviorListLocked ? null : openNewBehaviorDialog}
             renderContent={() => (
               <ColumnStackLayout noMargin>
                 {!allVisibleBehaviors.length && (
@@ -615,12 +622,16 @@ export const CompactObjectPropertiesEditor = ({
             isFolded={isVariablesFolded}
             toggleFolded={() => setIsVariablesFolded(!isVariablesFolded)}
             onOpenFullEditor={() => onEditObject(object, 'variables')}
-            onAdd={() => {
-              if (variablesListRef.current) {
-                variablesListRef.current.addVariable();
-              }
-              setIsVariablesFolded(false);
-            }}
+            onAdd={
+              isVariableListLocked
+                ? null
+                : () => {
+                    if (variablesListRef.current) {
+                      variablesListRef.current.addVariable();
+                    }
+                    setIsVariablesFolded(false);
+                  }
+            }
             renderContentAsHiddenWhenFolded={
               true /* Allows to keep a ref to the variables list for add button to work. */
             }
@@ -661,6 +672,7 @@ export const CompactObjectPropertiesEditor = ({
                     on this object.
                   </Trans>
                 }
+                isListLocked={isVariableListLocked}
               />
             )}
           />

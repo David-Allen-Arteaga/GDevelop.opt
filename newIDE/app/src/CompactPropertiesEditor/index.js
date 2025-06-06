@@ -80,6 +80,8 @@ export type PrimitiveValueField =
         labelIsUserDefined?: boolean,
       |}>,
       isHiddenWhenOnlyOneChoice?: boolean,
+      isAutocompleted?: boolean,
+      isAllowingAnyValue?: boolean,
       getEndAdornmentIcon?: Instance => ?(className: string) => React.Node,
       onClickEndAdornment?: Instance => void,
       renderLeftIcon?: (className?: string) => React.Node,
@@ -108,7 +110,7 @@ export type PrimitiveValueField =
       ...ValueFieldCommonProperties,
     |}
   | {|
-      valueType: 'textarea',
+      valueType: 'multilinestring',
       getValue: Instance => string,
       setValue: (instance: Instance, newValue: string) => void,
       ...ValueFieldCommonProperties,
@@ -552,7 +554,7 @@ const CompactPropertiesEditor = ({
             {field.renderIcon(value)}
           </IconButton>
         );
-      } else if (field.valueType === 'textarea') {
+      } else if (field.valueType === 'multilinestring') {
         const { setValue } = field;
         return (
           <CompactTextAreaField
@@ -638,7 +640,6 @@ const CompactPropertiesEditor = ({
       if (choices.length < 2 && field.isHiddenWhenOnlyOneChoice) {
         return;
       }
-
       const children = choices.map(({ value, label, labelIsUserDefined }) => (
         <SelectOption
           key={value}

@@ -9,34 +9,32 @@ type Props = {|
   open: boolean,
   project: gdProject,
   projectScopedContainersAccessor: ProjectScopedContainersAccessor,
-  objectName?: ?string,
+  objectName: string | null,
+  initialInstances: gdInitialInstancesContainer | null,
   variablesContainer: gdVariablesContainer,
   onApply: (selectedVariableName: string | null) => void,
   onCancel: () => void,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps | null,
-  /**
-   * If set to true, a deleted variable won't trigger a confirmation asking if the
-   * project must be refactored to delete any reference to it.
-   */
-  preventRefactoringToDeleteInstructions?: boolean,
   initiallySelectedVariableName?: string,
   shouldCreateInitiallySelectedVariable?: boolean,
   onComputeAllVariableNames: () => Array<string>,
+  isListLocked: boolean,
 |};
 
 const ObjectVariablesDialog = ({
   project,
   objectName,
+  initialInstances,
   variablesContainer,
   open,
   onCancel,
   onApply,
   hotReloadPreviewButtonProps,
-  preventRefactoringToDeleteInstructions,
   initiallySelectedVariableName,
   shouldCreateInitiallySelectedVariable,
   projectScopedContainersAccessor,
   onComputeAllVariableNames,
+  isListLocked,
 }: Props) => {
   const tabs = React.useMemo(
     () => [
@@ -60,7 +58,8 @@ const ObjectVariablesDialog = ({
     <VariablesEditorDialog
       project={project}
       projectScopedContainersAccessor={projectScopedContainersAccessor}
-      areObjectVariables
+      objectName={objectName}
+      initialInstances={initialInstances}
       open={open}
       onCancel={onCancel}
       onApply={onApply}
@@ -72,10 +71,8 @@ const ObjectVariablesDialog = ({
       }
       helpPagePath={'/all-features/variables/object-variables'}
       hotReloadPreviewButtonProps={hotReloadPreviewButtonProps}
-      preventRefactoringToDeleteInstructions={
-        preventRefactoringToDeleteInstructions
-      }
       id="object-variables-dialog"
+      isListLocked={isListLocked}
     />
   );
 };

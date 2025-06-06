@@ -13,6 +13,7 @@ type Props = {|
   onCancel: () => void,
   initiallySelectedVariableName: string,
   shouldCreateInitiallySelectedVariable?: boolean,
+  isListLocked: boolean,
 |};
 
 const LocalVariablesDialog = ({
@@ -24,6 +25,7 @@ const LocalVariablesDialog = ({
   onApply,
   initiallySelectedVariableName,
   shouldCreateInitiallySelectedVariable,
+  isListLocked,
 }: Props) => {
   const tabs = React.useMemo(
     () => [
@@ -47,13 +49,13 @@ const LocalVariablesDialog = ({
       title={<Trans>Local variables</Trans>}
       tabs={tabs}
       helpPagePath={'/all-features/variables/local-variables'}
-      preventRefactoringToDeleteInstructions
       id="local-variables-dialog"
       initiallySelectedVariableName={initiallySelectedVariableName}
       shouldCreateInitiallySelectedVariable={
         shouldCreateInitiallySelectedVariable
       }
       hotReloadPreviewButtonProps={null}
+      isListLocked={isListLocked}
     />
   );
 };

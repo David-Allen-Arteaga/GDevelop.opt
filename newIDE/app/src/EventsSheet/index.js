@@ -4,7 +4,7 @@ import { I18n } from '@lingui/react';
 import { type I18n as I18nType } from '@lingui/core';
 
 import * as React from 'react';
-import EventsTree from './EventsTree';
+import EventsTree, { type EventsTreeInterface } from './EventsTree';
 import { getInstructionMetadata } from './InstructionEditor/InstructionEditor';
 import InstructionEditorDialog from './InstructionEditor/InstructionEditorDialog';
 import InstructionEditorMenu from './InstructionEditor/InstructionEditorMenu';
@@ -151,6 +151,7 @@ type Props = {|
   unsavedChanges?: ?UnsavedChanges,
   isActive: boolean,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps,
+  onExtensionInstalled: (extensionName: string) => void,
 |};
 
 type ComponentProps = {|
@@ -231,7 +232,7 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
   ComponentProps,
   State
 > {
-  _eventsTree: ?EventsTree;
+  _eventsTree: ?EventsTreeInterface;
   _eventSearcher: ?EventsSearcher;
   _searchPanel: ?SearchPanelInterface;
   _containerDiv = React.createRef<HTMLDivElement>();
@@ -557,16 +558,16 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
       insertion.indexInList + 1
     );
 
-    const currentTree = this._eventsTree;
-    if (currentTree) {
-      currentTree.forceEventsUpdate(() => {
+    const eventsTree = this._eventsTree;
+    if (eventsTree) {
+      eventsTree.forceEventsUpdate(() => {
         const positions = this._getChangedEventRows([newEvent]);
         this._saveChangesToHistory(
           'ADD',
           { positionsBeforeAction: positions, positionAfterAction: positions },
           () => {
             if (!context && !selectedEventContext) {
-              currentTree.scrollToRow(currentTree.getEventRow(newEvent));
+              eventsTree.scrollToRow(eventsTree.getEventRow(newEvent));
             }
           }
         );
@@ -579,7 +580,7 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
           (type === 'BuiltinCommonInstructions::Comment' ||
             type === 'BuiltinCommonInstructions::Group')
         ) {
-          const rowIndex = currentTree.getEventRow(newEvent);
+          const rowIndex = eventsTree.getEventRow(newEvent);
           const clickableElement = document.querySelector(
             `[data-row-index="${rowIndex}"] [data-editable-text="true"]`
           );
@@ -1371,9 +1372,9 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
   };
 
   _getChangedEventRows = (events: Array<gdBaseEvent>) => {
-    const currentTree = this._eventsTree;
-    if (currentTree) {
-      return events.map(event => currentTree.getEventRow(event));
+    const eventsTree = this._eventsTree;
+    if (eventsTree) {
+      return events.map(event => eventsTree.getEventRow(event));
     }
     return [];
   };
@@ -1783,6 +1784,7 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
                   isCondition,
                 });
             }}
+            onExtensionInstalled={this.props.onExtensionInstalled}
           />
         )}
       </I18n>
@@ -2156,6 +2158,7 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
             shouldCreateInitiallySelectedVariable={
               this.state.editedVariable.shouldCreateVariable
             }
+            isListLocked={false}
           />
         )}
         {this.state.layoutVariablesDialogOpen && (
@@ -2165,6 +2168,7 @@ export class EventsSheetComponentWithoutHandle extends React.Component<
             onCancel={() => this.editLayoutVariables(false)}
             onApply={() => this.editLayoutVariables(false)}
             hotReloadPreviewButtonProps={hotReloadPreviewButtonProps}
+            isListLocked={false}
           />
         )}
         {this.state.textEditedEvent && (

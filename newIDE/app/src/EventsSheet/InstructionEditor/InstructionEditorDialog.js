@@ -11,6 +11,7 @@ import InstructionParametersEditor, {
   type InstructionParametersEditorInterface,
 } from './InstructionParametersEditor';
 import InstructionOrObjectSelector, {
+  type InstructionOrObjectSelectorInterface,
   type TabName,
 } from './InstructionOrObjectSelector';
 import InstructionOrExpressionSelector from './InstructionOrExpressionSelector';
@@ -70,6 +71,7 @@ type Props = {|
   anchorEl?: any, // Unused
   canPasteInstructions: boolean, // Unused
   onPasteInstructions: () => void, // Unused
+  onExtensionInstalled: (extensionName: string) => void,
 |};
 
 const getInitialStepName = (isNewInstruction: boolean): StepName => {
@@ -103,6 +105,7 @@ const InstructionEditorDialog = ({
   onSubmit,
   resourceManagementProps,
   openInstructionOrExpression,
+  onExtensionInstalled,
   i18n,
 }: Props) => {
   const forceUpdate = useForceUpdate();
@@ -138,7 +141,7 @@ const InstructionEditorDialog = ({
         chosenObjectName
       )
     : null;
-  const freeInstructionComponentRef = React.useRef<?InstructionOrObjectSelector>(
+  const freeInstructionComponentRef = React.useRef<?InstructionOrObjectSelectorInterface>(
     null
   );
   const [step, setStep] = React.useState(() =>
@@ -199,12 +202,6 @@ const InstructionEditorDialog = ({
     // This is not done automatically because a change in the object behaviors
     // is not detected by React at this level.
     chooseObject(chosenObject.getName());
-  };
-
-  const onExtensionInstalled = (i18n: I18nType) => {
-    setNewExtensionDialogOpen(false);
-    freeInstructionComponentRef.current &&
-      freeInstructionComponentRef.current.reEnumerateInstructions(i18n);
   };
 
   const instructionParametersEditor = React.useRef<?InstructionParametersEditorInterface>(
@@ -433,6 +430,11 @@ const InstructionEditorDialog = ({
           objectBehaviorsTypes={listObjectBehaviorsTypes(chosenObject)}
           onClose={() => setNewBehaviorDialogOpen(false)}
           onChoose={addBehavior}
+          onExtensionInstalled={extensionName => {
+            freeInstructionComponentRef.current &&
+              freeInstructionComponentRef.current.reEnumerateInstructions(i18n);
+            onExtensionInstalled(extensionName);
+          }}
         />
       )}
       {newExtensionDialogOpen && (
@@ -442,7 +444,14 @@ const InstructionEditorDialog = ({
               project={project}
               onClose={() => setNewExtensionDialogOpen(false)}
               onInstallExtension={() => {}}
-              onExtensionInstalled={() => onExtensionInstalled(i18n)}
+              onExtensionInstalled={extensionName => {
+                setNewExtensionDialogOpen(false);
+                freeInstructionComponentRef.current &&
+                  freeInstructionComponentRef.current.reEnumerateInstructions(
+                    i18n
+                  );
+                onExtensionInstalled(extensionName);
+              }}
             />
           )}
         </I18n>

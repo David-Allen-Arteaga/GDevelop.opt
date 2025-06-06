@@ -18,13 +18,9 @@ type Props = {|
   onApply: (selectedVariableName: string | null) => void,
   onCancel: () => void,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps,
-  /**
-   * If set to true, a deleted variable won't trigger a confirmation asking if the
-   * project must be refactored to delete any reference to it.
-   */
-  preventRefactoringToDeleteInstructions?: boolean,
   initiallySelectedVariableName?: string,
   onEditObjectVariables: () => void,
+  isListLocked: boolean,
 |};
 
 const ObjectInstanceVariablesDialog = ({
@@ -37,10 +33,10 @@ const ObjectInstanceVariablesDialog = ({
   onCancel,
   onApply,
   hotReloadPreviewButtonProps,
-  preventRefactoringToDeleteInstructions,
   initiallySelectedVariableName,
   projectScopedContainersAccessor,
   onEditObjectVariables,
+  isListLocked,
 }: Props) => {
   const tabs = React.useMemo(
     () => {
@@ -86,7 +82,7 @@ const ObjectInstanceVariablesDialog = ({
     <VariablesEditorDialog
       project={project}
       projectScopedContainersAccessor={projectScopedContainersAccessor}
-      areObjectVariables
+      objectName={objectInstance.getObjectName()}
       open={open}
       onCancel={onCancel}
       onApply={onApply}
@@ -95,11 +91,9 @@ const ObjectInstanceVariablesDialog = ({
       initiallySelectedVariableName={initiallySelectedVariableName}
       helpPagePath={'/all-features/variables/instance-variables'}
       hotReloadPreviewButtonProps={hotReloadPreviewButtonProps}
-      preventRefactoringToDeleteInstructions={
-        preventRefactoringToDeleteInstructions
-      }
       id="instance-variables-dialog"
       onEditObjectVariables={onEditObjectVariables}
+      isListLocked={isListLocked}
     />
   );
 };

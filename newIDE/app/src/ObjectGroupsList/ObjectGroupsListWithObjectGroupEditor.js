@@ -60,6 +60,7 @@ const ObjectGroupsListWithObjectGroupEditor = ({
       <ObjectGroupsList
         ref={objectGroupsListInterface}
         globalObjectGroups={globalObjectGroups}
+        projectScopedContainersAccessor={projectScopedContainersAccessor}
         objectGroups={objectGroups}
         onCreateGroup={() => setCreatingNewGroup(true)}
         onEditGroup={setEditedGroup}
@@ -70,6 +71,7 @@ const ObjectGroupsListWithObjectGroupEditor = ({
         onGroupRenamed={onGroupsUpdated}
         canSetAsGlobalGroup={canSetAsGlobalGroup}
         unsavedChanges={unsavedChanges}
+        isListLocked={false}
       />
       {(editedGroup || isCreatingNewGroup) && (
         <ObjectGroupEditorDialog
@@ -83,6 +85,7 @@ const ObjectGroupsListWithObjectGroupEditor = ({
           group={editedGroup}
           globalObjectsContainer={globalObjectsContainer}
           objectsContainer={objectsContainer}
+          initialInstances={null}
           bypassedObjectGroupsContainer={objectGroups}
           onCancel={() => {
             setEditedGroup(null);
@@ -100,6 +103,8 @@ const ObjectGroupsListWithObjectGroupEditor = ({
             }
           }}
           initialTab={'objects'}
+          isVariableListLocked={false}
+          isObjectListLocked={false}
         />
       )}
     </React.Fragment>

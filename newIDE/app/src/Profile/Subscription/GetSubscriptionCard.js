@@ -12,8 +12,13 @@ import classes from './GetSubscriptionCard.module.css';
 import Paper from '../../UI/Paper';
 import CrownShining from '../../UI/CustomSvgIcons/CrownShining';
 import { useResponsiveWindowSize } from '../../UI/Responsive/ResponsiveWindowMeasurer';
+import AuthenticatedUserContext from '../AuthenticatedUserContext';
+import { hasValidSubscriptionPlan } from '../../Utils/GDevelopServices/Usage';
+import IconButton from '../../UI/IconButton';
+import Cross from '../../UI/CustomSvgIcons/Cross';
 
 const styles = {
+  topRightHideButton: { position: 'absolute', right: 1, top: 1 },
   paper: {
     zIndex: 2, // Make sure the paper is above the background for the border effect.
     flex: 1,
@@ -42,6 +47,12 @@ type Props = {|
   onUpgrade?: () => void,
   forceColumnLayout?: boolean,
   filter?: 'individual' | 'team' | 'education',
+  recommendedPlanIdIfNoSubscription?:
+    | 'gdevelop_silver'
+    | 'gdevelop_gold'
+    | 'gdevelop_startup'
+    | 'gdevelop_education',
+  canHide?: boolean,
 |};
 
 const GetSubscriptionCard = ({
@@ -53,12 +64,23 @@ const GetSubscriptionCard = ({
   onUpgrade,
   forceColumnLayout,
   filter,
+  recommendedPlanIdIfNoSubscription,
+  canHide,
 }: Props) => {
+  const [isHidden, setIsHidden] = React.useState(false);
+  const { subscription } = React.useContext(AuthenticatedUserContext);
+  const actualPlanIdToRecommend = hasValidSubscriptionPlan(subscription)
+    ? // If the user already has a subscription, show the original subscription dialog.
+      undefined
+    : recommendedPlanIdIfNoSubscription;
   const { openSubscriptionDialog } = React.useContext(
     SubscriptionSuggestionContext
   );
   const { isMobile } = useResponsiveWindowSize();
   const columnLayout = forceColumnLayout || isMobile;
+
+  if (isHidden) return null;
+
   return (
     <div className={classes.premiumContainer}>
       <Paper style={styles.paper} background="medium">
@@ -93,6 +115,7 @@ const GetSubscriptionCard = ({
                     openSubscriptionDialog({
                       analyticsMetadata: {
                         reason: subscriptionDialogOpeningReason,
+                        recommendedPlanId: actualPlanIdToRecommend,
                       },
                       filter,
                     });
@@ -103,6 +126,19 @@ const GetSubscriptionCard = ({
             </ResponsiveLineStackLayout>
           </Column>
         </Line>
+        {canHide && (
+          <div style={styles.topRightHideButton}>
+            <IconButton
+              aria-label="hide"
+              onClick={() => {
+                setIsHidden(true);
+              }}
+              size="small"
+            >
+              <Cross fontSize="small" />
+            </IconButton>
+          </div>
+        )}
       </Paper>
     </div>
   );

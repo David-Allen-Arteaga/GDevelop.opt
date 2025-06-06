@@ -339,11 +339,11 @@ const SubscriptionDetails = ({
                     key="manage-subscription"
                     label={<Trans>Manage subscription</Trans>}
                     primary
-                    onClick={() =>
+                    onClick={() => {
                       openSubscriptionDialog({
                         analyticsMetadata: { reason: 'Consult profile' },
-                      })
-                    }
+                      });
+                    }}
                     disabled={isManageSubscriptionLoading}
                   />
                 ) : null,
@@ -457,6 +457,7 @@ const SubscriptionDetails = ({
         <GetSubscriptionCard
           label={<Trans>Choose a subscription</Trans>}
           subscriptionDialogOpeningReason="Consult profile"
+          recommendedPlanIdIfNoSubscription="gdevelop_silver"
         >
           <Text noMargin>
             <Trans>

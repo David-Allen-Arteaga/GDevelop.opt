@@ -4,7 +4,9 @@ import {
   isPixelArt,
   isPublicAssetResourceUrl,
   extractDecodedFilenameWithExtensionFromPublicAssetResourceUrl,
+  isCompatibleWithGDevelopVersion,
 } from '../Utils/GDevelopServices/Asset';
+import { getIDEVersion } from '../Version';
 import newNameGenerator from '../Utils/NewNameGenerator';
 import { unserializeFromJSObject } from '../Utils/Serializer';
 import flatten from 'lodash/flatten';
@@ -153,6 +155,23 @@ export type InstallAssetArgs = {|
   targetObjectFolderOrObject?: ?gdObjectFolderOrObject,
 |};
 
+const findVariant = (
+  container: gdEventsBasedObjectVariantsContainer,
+  assetStoreAssetId: string,
+  assetStoreOriginalName: string
+): gdEventsBasedObjectVariant | null => {
+  for (let index = 0; index < container.getVariantsCount(); index++) {
+    const variant = container.getVariantAt(index);
+    if (
+      variant.getAssetStoreAssetId() === assetStoreAssetId &&
+      variant.getAssetStoreOriginalName() === assetStoreOriginalName
+    ) {
+      return variant;
+    }
+  }
+  return null;
+};
+
 export const addAssetToProject = async ({
   asset,
   project,
@@ -167,6 +186,88 @@ export const addAssetToProject = async ({
   asset.objectAssets.forEach(objectAsset => {
     const type: ?string = objectAsset.object.type;
     if (!type) throw new Error('An object has no type specified');
+
+    const variantRenamings: Array<{
+      objectType: string,
+      oldVariantName: string,
+      newVariantName: string,
+    }> = [];
+    const serializedVariants = objectAsset.variants;
+    if (serializedVariants) {
+      // Install variants
+      for (const {
+        objectType,
+        variant: serializedVariant,
+      } of serializedVariants) {
+        if (project.hasEventsBasedObject(objectType)) {
+          const eventsBasedObject = project.getEventsBasedObject(objectType);
+          const variants = eventsBasedObject.getVariants();
+          let variant = findVariant(variants, asset.id, serializedVariant.name);
+          if (!variant) {
+            // TODO Forbid name with `::`
+            const uniqueNewName = newNameGenerator(
+              serializedVariant.name || asset.name,
+              tentativeNewName => variants.hasVariantNamed(tentativeNewName)
+            );
+            variant = variants.insertNewVariant(
+              uniqueNewName,
+              variants.getVariantsCount()
+            );
+            const variantName = variant.getName();
+            unserializeFromJSObject(
+              variant,
+              serializedVariant,
+              'unserializeFrom',
+              project
+            );
+            variant.setName(variantName);
+            variant.setAssetStoreAssetId(asset.id);
+            variant.setAssetStoreOriginalName(serializedVariant.name);
+          }
+          if (variant.getName() !== serializedVariant.name) {
+            variantRenamings.push({
+              objectType,
+              oldVariantName: serializedVariant.name,
+              newVariantName: variant.getName(),
+            });
+          }
+        }
+      }
+      // Update variant names into variants object configurations.
+      for (const {
+        objectType,
+        variant: serializedVariant,
+      } of serializedVariants) {
+        if (project.hasEventsBasedObject(objectType)) {
+          const eventsBasedObject = project.getEventsBasedObject(objectType);
+          const variants = eventsBasedObject.getVariants();
+          let variant = findVariant(variants, asset.id, serializedVariant.name);
+          if (variant) {
+            for (
+              let index = 0;
+              index < variant.getObjects().getObjectsCount();
+              index++
+            ) {
+              const object = variant.getObjects().getObjectAt(index);
+
+              if (project.hasEventsBasedObject(object.getType())) {
+                const customObjectConfiguration = gd.asCustomObjectConfiguration(
+                  object.getConfiguration()
+                );
+                const customObjectVariantRenaming = variantRenamings.find(
+                  renaming => renaming.objectType === object.getType()
+                );
+                if (customObjectVariantRenaming) {
+                  customObjectConfiguration.setVariantName(
+                    customObjectVariantRenaming.newVariantName
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Insert the object
     const originalName = sanitizeObjectName(objectAsset.object.name);
@@ -202,10 +303,27 @@ export const addAssetToProject = async ({
       'unserializeFrom',
       project
     );
-
-    object.setAssetStoreId(asset.id);
     // The name was overwritten after unserialization.
     object.setName(newName);
+    object.setAssetStoreId(asset.id);
+    if (project.hasEventsBasedObject(object.getType())) {
+      const customObjectConfiguration = gd.asCustomObjectConfiguration(
+        object.getConfiguration()
+      );
+      if (customObjectConfiguration.getVariantName()) {
+        customObjectConfiguration.setMarkedAsOverridingEventsBasedObjectChildrenConfiguration(
+          false
+        );
+      }
+      const customObjectVariantRenaming = variantRenamings.find(
+        renaming => renaming.objectType === object.getType()
+      );
+      if (customObjectVariantRenaming) {
+        customObjectConfiguration.setVariantName(
+          customObjectVariantRenaming.newVariantName
+        );
+      }
+    }
 
     // Add resources used by the object
     objectAsset.resources.forEach(serializedResource => {
@@ -273,6 +391,7 @@ export type RequiredExtensionInstallation = {|
   requiredExtensionShortHeaders: Array<ExtensionShortHeader>,
   missingExtensionShortHeaders: Array<ExtensionShortHeader>,
   outOfDateExtensionShortHeaders: Array<ExtensionShortHeader>,
+  incompatibleWithIdeExtensionShortHeaders: Array<ExtensionShortHeader>,
 |};
 
 export type InstallRequiredExtensionsArgs = {|
@@ -390,6 +509,7 @@ export const checkRequiredExtensionsUpdate = async ({
       requiredExtensionShortHeaders: [],
       missingExtensionShortHeaders: [],
       outOfDateExtensionShortHeaders: [],
+      incompatibleWithIdeExtensionShortHeaders: [],
     };
   }
 
@@ -414,7 +534,24 @@ export const checkRequiredExtensionsUpdate = async ({
     }
   );
 
-  const outOfDateExtensionShortHeaders = requiredExtensionShortHeaders.filter(
+  const compatibleWithIdeExtensionShortHeaders: Array<ExtensionShortHeader> = [];
+  const incompatibleWithIdeExtensionShortHeaders: Array<ExtensionShortHeader> = [];
+  for (const requiredExtensionShortHeader of requiredExtensionShortHeaders) {
+    if (
+      isCompatibleWithGDevelopVersion(
+        getIDEVersion(),
+        requiredExtensionShortHeader.gdevelopVersion
+      )
+    ) {
+      compatibleWithIdeExtensionShortHeaders.push(requiredExtensionShortHeader);
+    } else {
+      incompatibleWithIdeExtensionShortHeaders.push(
+        requiredExtensionShortHeader
+      );
+    }
+  }
+
+  const outOfDateExtensionShortHeaders = compatibleWithIdeExtensionShortHeaders.filter(
     requiredExtensionShortHeader =>
       project.hasEventsFunctionsExtensionNamed(
         requiredExtensionShortHeader.name
@@ -426,13 +563,14 @@ export const checkRequiredExtensionsUpdate = async ({
 
   const missingExtensionShortHeaders = filterMissingExtensions(
     gd,
-    requiredExtensionShortHeaders
+    compatibleWithIdeExtensionShortHeaders
   );
 
   return {
     requiredExtensionShortHeaders,
     missingExtensionShortHeaders,
     outOfDateExtensionShortHeaders,
+    incompatibleWithIdeExtensionShortHeaders,
   };
 };
 
@@ -461,4 +599,22 @@ export const checkRequiredExtensionsUpdateForAssets = async ({
   });
 
   return checkRequiredExtensionsUpdate({ requiredExtensions, project });
+};
+
+export const complyVariantsToEventsBasedObjectOf = (
+  project: gdProject,
+  createdObjects: Array<gdObject>
+) => {
+  const installedVariantObjectTypes = new Set<string>();
+  for (const createdObject of createdObjects) {
+    if (project.hasEventsBasedObject(createdObject.getType())) {
+      installedVariantObjectTypes.add(createdObject.getType());
+    }
+  }
+  for (const installedVariantObjectType of installedVariantObjectTypes) {
+    gd.EventsBasedObjectVariantHelper.complyVariantsToEventsBasedObject(
+      project,
+      project.getEventsBasedObject(installedVariantObjectType)
+    );
+  }
 };

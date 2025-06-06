@@ -22,7 +22,7 @@ import { FullSizeMeasurer } from '../../UI/FullSizeMeasurer';
 import PreferencesContext from '../../MainFrame/Preferences/PreferencesContext';
 import { useScreenType } from '../../UI/Responsive/ScreenTypeMeasurer';
 import Paper from '../../UI/Paper';
-import { type EditorId } from '..';
+import { type EditorId } from '../utils';
 import {
   type SceneEditorsDisplayInterface,
   type SceneEditorsDisplayProps,
@@ -63,6 +63,7 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
     layout,
     eventsFunctionsExtension,
     eventsBasedObject,
+    eventsBasedObjectVariant,
     updateBehaviorsSharedData,
     layersContainer,
     globalObjectsContainer,
@@ -221,6 +222,7 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
         addSerializedInstances: editor
           ? editor.addSerializedInstances
           : () => [],
+        snapSelection: editor ? editor.snapSelection : noop,
       },
     };
   });
@@ -252,6 +254,10 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
       ? editorTitleById[selectedEditorId]
       : null;
 
+  const isCustomVariant = eventsBasedObject
+    ? eventsBasedObject.getDefaultVariant() !== eventsBasedObjectVariant
+    : false;
+
   return (
     <FullSizeMeasurer>
       {({ width, height }) => (
@@ -267,6 +273,7 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
               project={project}
               layout={layout}
               eventsBasedObject={eventsBasedObject}
+              eventsBasedObjectVariant={eventsBasedObjectVariant}
               globalObjectsContainer={globalObjectsContainer}
               objectsContainer={objectsContainer}
               layersContainer={layersContainer}
@@ -331,6 +338,9 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
                       onOpenEventBasedObjectEditor={
                         props.onOpenEventBasedObjectEditor
                       }
+                      onOpenEventBasedObjectVariantEditor={
+                        props.onOpenEventBasedObjectVariantEditor
+                      }
                       onExportAssets={props.onExportAssets}
                       onDeleteObjects={(objectWithContext, cb) =>
                         props.onDeleteObjects(i18n, objectWithContext, cb)
@@ -362,6 +372,7 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
                       hotReloadPreviewButtonProps={
                         props.hotReloadPreviewButtonProps
                       }
+                      isListLocked={isCustomVariant}
                     />
                   )}
                 </I18n>
@@ -397,6 +408,9 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
                       tileMapTileSelection={props.tileMapTileSelection}
                       onSelectTileMapTile={props.onSelectTileMapTile}
                       lastSelectionType={props.lastSelectionType}
+                      onExtensionInstalled={props.onExtensionInstalled}
+                      isVariableListLocked={isCustomVariant}
+                      isBehaviorListLocked={isCustomVariant}
                     />
                   )}
                 </I18n>
@@ -409,6 +423,9 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
                       globalObjectGroups={
                         globalObjectsContainer &&
                         globalObjectsContainer.getObjectGroups()
+                      }
+                      projectScopedContainersAccessor={
+                        projectScopedContainersAccessor
                       }
                       objectGroups={objectsContainer.getObjectGroups()}
                       onCreateGroup={props.onCreateObjectGroup}
@@ -426,6 +443,7 @@ const SwipeableDrawerEditorsDisplay = React.forwardRef<
                         props.canObjectOrGroupBeGlobal(i18n, groupName)
                       }
                       unsavedChanges={props.unsavedChanges}
+                      isListLocked={isCustomVariant}
                     />
                   )}
                 </I18n>

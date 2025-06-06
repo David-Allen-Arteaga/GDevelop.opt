@@ -14,11 +14,13 @@ import {
   fakeAuthenticatedUserWithLegacyProSubscription,
   fakeAuthenticatedUserWithEducationPlan,
   fakeStartupAuthenticatedUser,
-  subscriptionPlansWithPricingSystems,
 } from '../../../../fixtures/GDevelopServicesTestData';
 import SubscriptionDialog from '../../../../Profile/Subscription/SubscriptionDialog';
 import AlertProvider from '../../../../UI/Alert/AlertProvider';
-import { getAvailableSubscriptionPlansWithPrices } from '../../../../Utils/UseSubscriptionPlans';
+import useSubscriptionPlans, {
+  filterAvailableSubscriptionPlansWithPrices,
+} from '../../../../Utils/UseSubscriptionPlans';
+import LoaderModal from '../../../../UI/LoaderModal';
 
 export default {
   title: 'Subscription/SubscriptionDialog',
@@ -159,31 +161,42 @@ export const Default = ({
     }
   }
 
+  const { getSubscriptionPlansWithPricingSystems } = useSubscriptionPlans({
+    includeLegacy: true,
+    authenticatedUser,
+  });
+  const subscriptionPlansWithPricingSystems = getSubscriptionPlansWithPricingSystems();
+
   const { subscription: userSubscription } = authenticatedUser;
-  const userLegacySubscriptionPlanWithPricingSystem = userSubscription
-    ? subscriptionPlansWithPricingSystems.find(
+  const userLegacySubscriptionPlanWithPricingSystem =
+    (userSubscription &&
+      subscriptionPlansWithPricingSystems &&
+      subscriptionPlansWithPricingSystems.find(
         planWithPricingSystem =>
           planWithPricingSystem.id === userSubscription.planId &&
           planWithPricingSystem.isLegacy
-      )
-    : null;
+      )) ||
+    null;
 
-  return (
+  return subscriptionPlansWithPricingSystems ? (
     <AlertProvider>
       <AuthenticatedUserContext.Provider value={authenticatedUser}>
         <SubscriptionDialog
-          open
-          subscriptionPlansWithPricingSystems={getAvailableSubscriptionPlansWithPrices(
-            subscriptionPlansWithPricingSystems
-          )}
-          userLegacySubscriptionPlanWithPricingSystem={
+          getAvailableSubscriptionPlansWithPrices={() =>
+            filterAvailableSubscriptionPlansWithPrices(
+              subscriptionPlansWithPricingSystems
+            )
+          }
+          getUserLegacySubscriptionPlanWithPricingSystem={() =>
             userLegacySubscriptionPlanWithPricingSystem
           }
           onClose={() => action('on close')()}
-          analyticsMetadata={{ reason: 'Debugger' }}
           filter={filter === 'none' ? undefined : filter}
+          onOpenPendingDialog={() => action('on open pending dialog')()}
         />
       </AuthenticatedUserContext.Provider>
     </AlertProvider>
+  ) : (
+    <LoaderModal show />
   );
 };

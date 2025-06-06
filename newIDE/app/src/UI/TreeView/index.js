@@ -30,6 +30,7 @@ export type MenuButton = {|
   icon: React.Node,
   label: MessageDescriptor,
   click: ?() => void | Promise<void>,
+  enabled?: boolean,
 |};
 
 type FlattenedNode<Item> = {|
@@ -422,7 +423,7 @@ const TreeView = <Item: ItemBaseAttributes>(
     onRenameItem(item, trimmedNewName);
   };
 
-  let flattenedData = React.useMemo(
+  const flattenedData = React.useMemo(
     () => flattenOpened(items, searchText ? searchText.toLowerCase() : null),
     [flattenOpened, items, searchText]
   );

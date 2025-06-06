@@ -24,8 +24,8 @@ import ErrorBoundary from '../../UI/ErrorBoundary';
 type Props = {|
   project: gdProject,
   onClose: () => void,
-  onInstallExtension: ExtensionShortHeader => void,
-  onExtensionInstalled?: (extensionShortHeader?: ExtensionShortHeader) => void,
+  onInstallExtension: (extensionName: string) => void,
+  onExtensionInstalled: (extensionName: string) => void,
   onCreateNew?: () => void,
 |};
 
@@ -61,26 +61,30 @@ const ExtensionsSearchDialog = ({
   ) => {
     setIsInstalling(true);
     try {
-      let wasExtensionInstalledOrImported;
+      let installedOrImportedExtensionName: string | null = null;
       if (!!extensionShortHeader) {
-        onInstallExtension(extensionShortHeader);
-        wasExtensionInstalledOrImported = await installDisplayedExtension(
+        onInstallExtension(extensionShortHeader.name);
+        const wasExtensionInstalledOrImported = await installDisplayedExtension(
           i18n,
           project,
           eventsFunctionsExtensionsState,
           extensionShortHeader
         );
+        installedOrImportedExtensionName = wasExtensionInstalledOrImported
+          ? extensionShortHeader.name
+          : null;
       } else {
-        wasExtensionInstalledOrImported = await importExtension(
+        installedOrImportedExtensionName = await importExtension(
           i18n,
           eventsFunctionsExtensionsState,
-          project
+          project,
+          onInstallExtension
         );
       }
 
-      if (wasExtensionInstalledOrImported) {
+      if (installedOrImportedExtensionName) {
         setExtensionWasInstalled(true);
-        if (onExtensionInstalled) onExtensionInstalled();
+        onExtensionInstalled(installedOrImportedExtensionName);
         return true;
       }
 

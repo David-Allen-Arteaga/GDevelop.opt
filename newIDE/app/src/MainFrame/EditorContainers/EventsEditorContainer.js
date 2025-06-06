@@ -53,6 +53,10 @@ export class EventsEditorContainer extends React.Component<RenderEditorContainer
     // No thing to be done.
   }
 
+  onSceneObjectsDeleted(scene: gdLayout) {
+    // No thing to be done.
+  }
+
   getLayout(): ?gdLayout {
     const { project, projectItemName } = this.props;
     if (
@@ -115,6 +119,7 @@ export class EventsEditorContainer extends React.Component<RenderEditorContainer
         onOpenExternalEvents={this.props.onOpenExternalEvents}
         isActive={this.props.isActive}
         hotReloadPreviewButtonProps={this.props.hotReloadPreviewButtonProps}
+        onExtensionInstalled={this.props.onExtensionInstalled}
       />
     );
   }

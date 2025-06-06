@@ -13,13 +13,9 @@ type Props = {|
   onApply: (selectedVariableName: string | null) => void,
   onCancel: () => void,
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps | null,
-  /**
-   * If set to true, a deleted variable won't trigger a confirmation asking if the
-   * project must be refactored to delete any reference to it.
-   */
-  preventRefactoringToDeleteInstructions?: boolean,
   initiallySelectedVariableName?: string,
   shouldCreateInitiallySelectedVariable?: boolean,
+  isListLocked: boolean,
 |};
 
 const SceneVariablesDialog = ({
@@ -29,9 +25,9 @@ const SceneVariablesDialog = ({
   onCancel,
   onApply,
   hotReloadPreviewButtonProps,
-  preventRefactoringToDeleteInstructions,
   initiallySelectedVariableName,
   shouldCreateInitiallySelectedVariable,
+  isListLocked,
 }: Props) => {
   const onComputeAllVariableNames = React.useCallback(
     () =>
@@ -83,10 +79,8 @@ const SceneVariablesDialog = ({
       }
       helpPagePath={'/all-features/variables/scene-variables'}
       hotReloadPreviewButtonProps={hotReloadPreviewButtonProps}
-      preventRefactoringToDeleteInstructions={
-        preventRefactoringToDeleteInstructions
-      }
       id="scene-variables-dialog"
+      isListLocked={isListLocked}
     />
   );
 };

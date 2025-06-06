@@ -47,14 +47,15 @@ export const installExtension = async (
 export const importExtension = async (
   i18n: I18nType,
   eventsFunctionsExtensionsState: EventsFunctionsExtensionsState,
-  project: gdProject
-): Promise<boolean> => {
+  project: gdProject,
+  onWillInstallExtension: (extensionName: string) => void
+): Promise<string | null> => {
   const eventsFunctionsExtensionOpener = eventsFunctionsExtensionsState.getEventsFunctionsExtensionOpener();
-  if (!eventsFunctionsExtensionOpener) return false;
+  if (!eventsFunctionsExtensionOpener) return null;
 
   try {
     const pathOrUrl = await eventsFunctionsExtensionOpener.chooseEventsFunctionExtensionFile();
-    if (!pathOrUrl) return false;
+    if (!pathOrUrl) return null;
 
     const serializedExtension = await eventsFunctionsExtensionOpener.readEventsFunctionExtensionFile(
       pathOrUrl
@@ -66,8 +67,10 @@ export const importExtension = async (
           t`An extension with this name already exists in the project. Importing this extension will replace it: are you sure you want to continue?`
         )
       );
-      if (!answer) return false;
+      if (!answer) return null;
     }
+
+    onWillInstallExtension(serializedExtension.name);
 
     await addSerializedExtensionsToProject(
       eventsFunctionsExtensionsState,
@@ -75,7 +78,7 @@ export const importExtension = async (
       [serializedExtension],
       false
     );
-    return true;
+    return serializedExtension.name;
   } catch (rawError) {
     showErrorBox({
       message: i18n._(
@@ -84,6 +87,6 @@ export const importExtension = async (
       rawError,
       errorId: 'extension-loading-error',
     });
-    return false;
+    return null;
   }
 };

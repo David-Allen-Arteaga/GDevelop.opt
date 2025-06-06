@@ -20,7 +20,11 @@ import * as PIXI_SPINE from 'pixi-spine';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import optionalRequire from '../Utils/OptionalRequire';
-import { rgbOrHexToHexNumber } from '../Utils/ColorTransformer';
+import {
+  rgbOrHexToHexNumber,
+  hexNumberToRGBArray,
+} from '../Utils/ColorTransformer';
+
 const path = optionalRequire('path');
 const electron = optionalRequire('electron');
 const gd: libGDevelop = global.gd;
@@ -79,7 +83,8 @@ const ObjectsRenderingService = {
     instance: gdInitialInstance,
     associatedObjectConfiguration: gdObjectConfiguration,
     pixiContainer: PIXI.Container,
-    threeGroup: THREE.Group | null
+    threeGroup: THREE.Group | null,
+    propertyOverridings: Map<string, string> = new Map<string, string>()
   ): RenderedInstance | Rendered3DInstance {
     const objectType = associatedObjectConfiguration.getType();
     if (threeGroup && this.renderers3D.hasOwnProperty(objectType)) {
@@ -97,7 +102,8 @@ const ObjectsRenderingService = {
         instance,
         associatedObjectConfiguration,
         pixiContainer,
-        PixiResourcesLoader
+        PixiResourcesLoader,
+        propertyOverridings
       );
     else {
       if (project.hasEventsBasedObject(objectType)) {
@@ -131,7 +137,8 @@ const ObjectsRenderingService = {
             associatedObjectConfiguration,
             pixiContainer,
             threeGroup,
-            PixiResourcesLoader
+            PixiResourcesLoader,
+            propertyOverridings
           );
         }
       }
@@ -277,6 +284,7 @@ const ObjectsRenderingService = {
     }
   },
   rgbOrHexToHexNumber, // Expose a ColorTransformer function, useful to manage different color types for the extensions
+  hexNumberToRGBArray, // Expose a ColorTransformer function, useful to manage different color types for the extensions
   gd, // Expose gd so that it can be used by renderers
   PIXI, // Expose PIXI so that it can be used by renderers
   THREE, // Expose THREE so that it can be used by renderers
