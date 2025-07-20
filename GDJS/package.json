@@ -12,7 +12,7 @@
     "@types/sinon": "^10.0.13",
     "@types/three": "0.160.0",
     "esbuild": "^0.13.12",
-    "lebab": "^3.1.0",
+    "lebab": "^3.2.0",
     "minimist": "^1.2.5",
     "patch-package": "^6.4.7",
     "pixi-spine": "4.0.4",
